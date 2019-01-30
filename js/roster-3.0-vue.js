@@ -118,10 +118,10 @@ let weekDate = function(day) {  //wed: 1, tue: 7
 
 let patterns = { 
     excudecode: '^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
-    times: '(^(?:0?\\d|1(?:0|1|2))(?:\\:(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:\\:(?:0|3)0)?\\s*(?:a|p)m?)',
+    times: '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
     location: '(?:(?:\\s+)@([a-z]{3,4}))',
     position: '(?:(?:\\s+)(#?(?:rest|barn|dtru)?)?\\s?(cr|fc|pr|su|cl)?)',
-    time: '^(0?\\d|1(?:0|1|2))((?:\\:)((?:0|3)0))?\\s*((?:a|p)m?)',
+    time: '^(0?\\d|1(?:0|1|2))((?:(\\:)?)((?:0|3)0))?\\s*((?:a|p)m?)',
     qualifier: '(rest|barn|dtru)',
     comment: '**[A-Za-z\\s/]'
 };
@@ -166,15 +166,15 @@ function Shift(employee, date, shift) {
         let regex = new RegExp(patterns.time, 'i'),
             result = regex.exec(value),
             hours = result[1].startsWith('0') ? result[1].replace('0', '') : result[1],
-            minutes = typeof(result[3]) === "undefined" ? "00" : result[3],
-            period = result[4].length === 1 ? result[4] + "m" : result[4];
+            minutes = typeof(result[4]) === "undefined" ? "00" : result[4],
+            period = result[5].length === 1 ? result[5] + "m" : result[5];
         return (hours + ':' + minutes + period);
     }
             
     let getTime = function (value) {
         let regex = new RegExp(patterns.times, 'i');
         let result = getMatches(regex, value);
-        return { start: properTime(result[1]), end: properTime(result[2]) };
+        return { start: properTime(result[1]), end: properTime(result[3]) };
     }
 
     let hasLocation = function (value) {
@@ -385,7 +385,7 @@ let rostershift = {
                 :class="{missing :schedule.isEmpty, invalid :!schedule.isValid}"
                 v-on:focusin="$emit('focusin')" 
                 v-on:focusout="$emit('focusout')" 
-                v-model="schedule.shiftString"/>`
+                v-model.lazy="schedule.shiftString"/>`
 }
 
 let rostershiftcell = {
