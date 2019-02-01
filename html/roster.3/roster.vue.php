@@ -42,7 +42,7 @@
         <div v-if="sections.length">
             <table>
                 <tbody>
-                    <tr class="row" data-row="0">
+                    <tr class="rosterrow" data-row="0">
                         <td class="col rowheader header" data-col="1">&nbsp;</td>
                         <td class="col header name" data-col="2">Name</td>
                         <td class="col header position" data-col="3">Position</td>
@@ -62,8 +62,22 @@
                 v-for="(section, index) in sections" 
                 :section="section" 
                 :key="index" 
-                v-on:hours-updated="updatestats()"
+                v-on:hours-updated="hoursUpdated()"
                 v-on:row-deleted="rowDeleted()">
+            </div>
+            <div class="rostertotals">
+                <table>
+                    <tbody>
+                        <tr class="rosterrow">
+                            <td class="title">Total hours</td>
+                            <td class="data number">{{totalhours}}</td>
+                        </tr>
+                        <tr class="rosterrow">
+                            <td class="title">Agreed to hours</td>
+                            <td class="data number">{{agreedhours}}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

@@ -423,6 +423,7 @@ let rosterslot = {
                     this.schedules.sun.hours() +
                     this.schedules.mon.hours() +
                     this.schedules.tue.hours();
+            this.employee.hours = this.hours;
             this.$emit('hours-updated');
         },
         createSchedule: function(weekDate) {
@@ -455,7 +456,7 @@ let rostersection = {
                             :employee="employee" 
                             :key="index"
                             :index="index"
-                            v-on:hours-updated="$emit('hours-updated')"
+                            v-on:hours-updated="hoursUpdated()"
                             v-on:delete-row="deleteRow">
                         </rosterslot>
                     </tbody>
@@ -489,6 +490,15 @@ let rostersection = {
             this.deletedemployees.push(this.sectionemployees[index]);
             this.sectionemployees.splice(index, 1);
             this.$emit('row-deleted');
+        },
+        hoursUpdated: function() {
+            this.section.totalhours = 0;
+            for(employee of this.sectionemployees) {
+                if(employee.hours) {
+                    this.section.totalhours += employee.hours;
+                }
+            }
+            this.$emit('hours-updated');
         }
     },
     created() {
@@ -503,34 +513,6 @@ let rostersection = {
     }
 }
 
-// let rostertitle = {
-//     props: ['location'],
-//     data: function() {
-//         return {
-//             nomissingcells: 0,
-//             noinvalidcells: 0
-//         }
-//     },
-//     template: `<div>
-//                 <span class="left">
-//                   <h2>{{location.name}} (week ending: {{location.weekending.format('dddd MMMM DD, YYYY')}})</h2>
-//                 </span>
-//                 <span class="right">
-//                   <div><h4>Missing cells:</h4><h4 class="stats" v-on:update-hours="updatestats()">{{nomissingcells}}</h4></div>
-//                   <div><h4>Invalid cells:</h4><h4 class="stats" v-on:update-hours="updatestats()">{{noinvalidcells}}</h4></div>
-//                 </span>
-//                </div>`,
-//     methods: {
-//         updatestats: function() {
-//             this.nomissingcells = noMissingCells();
-//             this.noinvalidcells = noInvalidCells();
-//         }
-//     },
-//     mounted() {
-//         this.updatestats();
-//     }
-// }
-
 const app = new Vue({
     el: '#main',
     data: {
@@ -538,12 +520,12 @@ const app = new Vue({
         location: {
             name: '',
             weekending: null
-            // totalhours: 0,
-            // agreedhours: 0,
-            // additionalhours: 0
         },
         nomissingcells: 0,
-        noinvalidcells: 0
+        noinvalidcells: 0,
+        totalhours: 0,
+        agreedhours: 0
+        // additionalhours: 0
     },
     components: {
         'rostersection' : rostersection
@@ -568,6 +550,15 @@ const app = new Vue({
         rowDeleted: function() {
             //console.log('calling row deleted.')
             this.showRowNumbers();
+            this.updatestats();
+        },
+        hoursUpdated: function() {
+            this.totalhours = 0;
+            for(section of this.sections) {
+                if (section.totalhours) {
+                    this.totalhours += section.totalhours;
+                }
+            }
             this.updatestats();
         }
     },

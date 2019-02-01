@@ -1,7 +1,7 @@
 #main table {
     border-collapse: collapse;
     table-layout: fixed;
-    width: 100%; 
+    width: 100%;
 }
 
 td {
@@ -59,7 +59,7 @@ td:not(.shift) {
     text-align: right;
 }
 
-.row, .section .title {
+.rosterrow, .section .title {
     height: 50px;
     max-height: 50px;
 }
@@ -114,12 +114,22 @@ h4 {
     max-width: 300px;
 }
 
-.stats .title {
-    width: 200px;
+.rostertotals {
+    display: inline-block;
+    width: 300px;
+    margin-top: 20px;
+    position: absolute;
+    right: 0;
+}
+
+.stats .title, 
+.rostertotals .title {
+    width: 250px;
     background: palegoldenrod;
 }
 
-.stats .data {
+.stats .data, 
+.rostertotals .data {
     min-width: 50px;
     max-width: 50px;
 }
