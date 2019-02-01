@@ -96,7 +96,7 @@ $(function () {
 });
 
 let numberRows = function(){
-    let rowheaders = $('.rowheader:not(.header)');
+    let rowheaders = $('.rownumber');
     for(let i = 0; i < rowheaders.length; i++){
         $(rowheaders[i]).html((i+1));
     }
@@ -320,13 +320,13 @@ let rostershift = {
                 v-on:focusout="$emit('focusout')" 
                 v-model="schedule.shiftstring" 
                 v-on:change="valueChanged()"
-                v-on:keyup.enter="valueChanged()"/>`, //when .lazy omitted entering split shifts fails
+                v-on:keyup.enter="valueChanged()"/>`, 
     methods: {
         valueChanged: function() {
             if (this.schedule.isValid()){
                 this.schedule.shiftstring = this.schedule.format('short');
             }
-            this.$emit('change');
+            this.$emit('cellchanged');
         }
     }
 }
@@ -338,7 +338,7 @@ let rostershiftcell = {
                 :class="{active :isActive}" 
                 v-on:focusin="isActive = true" 
                 v-on:focusout="isActive = false">
-                    <rostershift v-on:change="$emit('update-hours')"
+                    <rostershift v-on:cellchanged="$emit('update-hours')"
                         :schedule="schedule">
                     </rostershift>
                 </td>`,
@@ -353,7 +353,7 @@ let rostershiftcell = {
 }
 
 let rosterslot = {
-    props: ['employee'],
+    props: ['employee', 'index'],
     data: function() {
         return {
             schedules: {
@@ -370,14 +370,19 @@ let rosterslot = {
         }
     },
     template: `<tr>
-                <td class="col rowheader">&nbsp;</td>
-                <td class="col name">{{fullname}}</td>
+                <td class="col rowheader">
+                    <span class="rownumber">&nbsp;</span>
+                    <span class="deleterow">
+                        <button type="button" class="btn btn-xs" v-on:click="emitDeleteEmployee()">-</button>
+                    </span>
+                </td>
+                <td class="col name" :class="{invalid :nameNotSet}">{{fullname}}</td>
                 <td class="col position">{{position}}</td>
                 <rostershiftcell 
                     v-for="(schedule, index) in schedules" 
                     :schedule="schedule" 
                     :key="index"
-                    v-on:update-hours="updatehours();">
+                    v-on:update-hours="updatehours()">
                 </rostershiftcell>
                 <td class="col hours number">{{hours}}</td>
                </tr>`,
@@ -394,6 +399,11 @@ let rosterslot = {
                 position = `${this.employee.defaultQualifier} ${position}`;
             }
             return position;
+        },
+        nameNotSet: function() {
+            if (this.fullname.trim() === '')
+                return true;
+            return false;
         }
     },
     methods: {
@@ -413,11 +423,15 @@ let rosterslot = {
                     this.schedules.sun.hours() +
                     this.schedules.mon.hours() +
                     this.schedules.tue.hours();
+            this.$emit('hours-updated');
         },
         createSchedule: function(weekDate) {
             let schedule = new Schedule(this.employee, weekDate);
             //schedule.shiftstring = '05:00 AM - 02:00 PM';
             return schedule;
+        },
+        emitDeleteEmployee: function() {
+            this.$emit('delete-row', this.index);
         }
     },
     mounted() {
@@ -428,36 +442,64 @@ let rosterslot = {
 let rostersection = {
     props: ['section'],
     template: `<div class="section" v-bind:data-sectionID="section.id">
-                <div class="title">{{section.name}}</div>
+                <div class="title">{{section.name}}
+                    <span>
+                        <button type="button" class="btn btn-sm btn-add" v-on:click="addEmployee()">Add</button>
+                    </span>
+                </div>
                 <table class="details">
                     <tbody>
                         <rosterslot 
                             class="row" 
-                            v-for="(employee, index) in employees" 
+                            v-for="(employee, index) in sectionemployees" 
                             :employee="employee" 
-                            :key="index">
+                            :key="index"
+                            :index="index"
+                            v-on:hours-updated="$emit('hours-updated')"
+                            v-on:delete-row="deleteRow">
                         </rosterslot>
                     </tbody>
                 </table>
                </div>`,
     data: function() {
         return {
-            employees: []
+            sectionemployees: [],
+            deletedemployees: []
         }
     },
     components: {
         'rosterslot' : rosterslot
     },
+    methods: {
+        addEmployee: function() {
+            let newemployee = {
+                emp_no: '',
+                emp_fname: '',
+                emp_lname: '',
+                gender: '',
+                defaultPosition: this.section.defaultPosition,
+                defaultQualifier: 'REST', // change this to the default qualifier for the location
+                sectionDefID: this.section.id,
+                defaultLocation: ''
+            }
+            this.sectionemployees.push(newemployee);
+        },
+        deleteRow: function(index) {
+            //console.log(`Received request to delete index ${index}`);
+            this.deletedemployees.push(this.sectionemployees[index]);
+            this.sectionemployees.splice(index, 1);
+            this.$emit('row-deleted');
+        }
+    },
     created() {
         // this.employees = getEmployeesForSection(this.section.id);
-        let sectionEmployees = [];    
+        this.sectionemployees = [];    
         for(employee of settings.employees){
             if (employee.sectionDefID === this.section.id)
             {
-                sectionEmployees.push(employee);
+                this.sectionemployees.push(employee);
             }
         }
-        this.employees = sectionEmployees;
     }
 }
 
@@ -516,12 +558,21 @@ const app = new Vue({
     // },
     methods: {
         updatestats: function() {
-            // this.nomissingcells = noMissingCells();
-            // this.noinvalidcells = noInvalidCells();
+            //console.log("updating stats");
+            this.nomissingcells = noMissingCells();
+            this.noinvalidcells = noInvalidCells();
+        },
+        showRowNumbers: function() {
+            numberRows();
+        },
+        rowDeleted: function() {
+            //console.log('calling row deleted.')
+            this.showRowNumbers();
+            this.updatestats();
         }
     },
     updated: function(){
-        numberRows();
+        this.showRowNumbers();
         this.updatestats();
     }
 })

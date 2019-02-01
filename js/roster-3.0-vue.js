@@ -111,6 +111,16 @@ let totalHours = function() {
     return sum;
 }
 
+let noMissingCells = function() {
+    let missingcells = $('.missing');
+    return missingcells.length;
+}
+
+let noInvalidCells = function() {
+    let invalidrows = $('.invalid');
+    return invalidrows.length;
+}
+
 let weekDate = function(day) {  //wed: 1, tue: 7
     let noofdays = day - 7;
     return moment(settings.weekending, 'MM/DD/YYYY').add(noofdays, 'days');
@@ -223,7 +233,7 @@ function Shift(employee, date, shift) {
         } else if (format == 'extrashort') {
             retval = retval.replace(/(:00)/g, '').replace(/\s/g, '').replace(/M/gi, '');
         }
-        return retval;
+        return retval.toUpperCase();
     }
 
     this.hours = function(){
@@ -349,7 +359,7 @@ function Schedule(employee, date, shiftstring) {
 
     let getExcuseCode = function(value) {
         let regex = new RegExp(patterns.excudecode, 'i');
-        return regex.exec(value)[1].trim();
+        return regex.exec(value)[1].trim().toUpperCase();
     }
 
     let isTimes = function(value) {
@@ -385,7 +395,8 @@ let rostershift = {
                 :class="{missing :schedule.isEmpty, invalid :!schedule.isValid}"
                 v-on:focusin="$emit('focusin')" 
                 v-on:focusout="$emit('focusout')" 
-                v-model.lazy="schedule.shiftString"/>`
+                v-model.lazy="schedule.shiftString"
+                v-on:change="$emit('change')"/>` //when .lazy omitted entering split shifts fails
 }
 
 let rostershiftcell = {
@@ -394,9 +405,8 @@ let rostershiftcell = {
                 class="col shift" 
                 :class="{active :isActive}" 
                 v-on:focusin="isActive = true" 
-                v-on:focusout="isActive = false"
-                v-on:change="$emit('update-hours')">
-                    <rostershift 
+                v-on:focusout="isActive = false">
+                    <rostershift v-on:change="$emit('update-hours')"
                         :schedule="schedule">
                     </rostershift>
                 </td>`,
@@ -431,14 +441,13 @@ let rosterslot = {
                 <td class="col rowheader">&nbsp;</td>
                 <td class="col name">{{fullname}}</td>
                 <td class="col position">{{position}}</td>
-                <rostershiftcell :schedule="schedules.wed" v-on:update-hours="updatehours()"></rostershiftcell>
-                <rostershiftcell :schedule="schedules.thu" v-on:update-hours="updatehours()"></rostershiftcell>
-                <rostershiftcell :schedule="schedules.fri" v-on:update-hours="updatehours()"></rostershiftcell>
-                <rostershiftcell :schedule="schedules.sat" v-on:update-hours="updatehours()"></rostershiftcell>
-                <rostershiftcell :schedule="schedules.sun" v-on:update-hours="updatehours()"></rostershiftcell>
-                <rostershiftcell :schedule="schedules.mon" v-on:update-hours="updatehours()"></rostershiftcell>
-                <rostershiftcell :schedule="schedules.tue" v-on:update-hours="updatehours()"></rostershiftcell>
-                <td class="col hours">{{hours}}</td>
+                <rostershiftcell 
+                    v-for="(schedule, index) in schedules" 
+                    :schedule="schedule" 
+                    :key="index"
+                    v-on:update-hours="updatehours();">
+                </rostershiftcell>
+                <td class="col hours number">{{hours}}</td>
                </tr>`,
     components: {
        'rostershiftcell' : rostershiftcell
@@ -485,7 +494,12 @@ let rostersection = {
                 <div class="title">{{section.name}}</div>
                 <table class="details">
                     <tbody>
-                        <rosterslot class="row" v-for="(employee, index) in employees" :employee="employee" :key="index"></rosterslot>
+                        <rosterslot 
+                            class="row" 
+                            v-for="(employee, index) in employees" 
+                            :employee="employee" 
+                            :key="index">
+                        </rosterslot>
                     </tbody>
                 </table>
                </div>`,
@@ -510,43 +524,33 @@ let rostersection = {
     }
 }
 
-let rostertotals = {
-    props: ['location'],
-    data: function() {
-        return {
-            totalhours: 0,
-            agreedhours: 0
-        }
-    },
-    template:  `<div>
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td>Total Hours</td>
-                                <td>{{totalhours}}</td>
-                            </tr>
-                            <tr v-if="agreedhours > 0">
-                                <td>Agreed Hours</td>
-                                <td>{{agreedhours}}</td>
-                            </tr>
-                            <tr v-if="agreedhours > 0">
-                                <td>Difference</td>
-                                <td>{{agreedhours - totalhours}}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>`,
-    methods: {
-        calculatehours: function() {
-            this.totalhours = 0;
-        }
-    }
-}
-
-let rostertitle = {
-    props: ['location'],
-    template: `<h2>{{location.name}} (week ending: {{location.weekending.format('dddd MMMM DD, YYYY')}})</h2>`
-}
+// let rostertitle = {
+//     props: ['location'],
+//     data: function() {
+//         return {
+//             nomissingcells: 0,
+//             noinvalidcells: 0
+//         }
+//     },
+//     template: `<div>
+//                 <span class="left">
+//                   <h2>{{location.name}} (week ending: {{location.weekending.format('dddd MMMM DD, YYYY')}})</h2>
+//                 </span>
+//                 <span class="right">
+//                   <div><h4>Missing cells:</h4><h4 class="stats" v-on:update-hours="updatestats()">{{nomissingcells}}</h4></div>
+//                   <div><h4>Invalid cells:</h4><h4 class="stats" v-on:update-hours="updatestats()">{{noinvalidcells}}</h4></div>
+//                 </span>
+//                </div>`,
+//     methods: {
+//         updatestats: function() {
+//             this.nomissingcells = noMissingCells();
+//             this.noinvalidcells = noInvalidCells();
+//         }
+//     },
+//     mounted() {
+//         this.updatestats();
+//     }
+// }
 
 const app = new Vue({
     el: '#main',
@@ -555,12 +559,15 @@ const app = new Vue({
         location: {
             name: '',
             weekending: null
-        }
+            // totalhours: 0,
+            // agreedhours: 0,
+            // additionalhours: 0
+        },
+        nomissingcells: 0,
+        noinvalidcells: 0
     },
     components: {
-        'rostersection' : rostersection,
-        'rostertitle' : rostertitle,
-        'rostertotals' : rostertotals
+        'rostersection' : rostersection
     },
     // created: function() {
     //     let url = `getlocation.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
@@ -570,7 +577,14 @@ const app = new Vue({
     //         this.location = json;
     //     })
     // },
+    methods: {
+        updatestats: function() {
+            // this.nomissingcells = noMissingCells();
+            // this.noinvalidcells = noInvalidCells();
+        }
+    },
     updated: function(){
         numberRows();
+        this.updatestats();
     }
 })

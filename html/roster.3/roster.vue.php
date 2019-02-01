@@ -17,7 +17,27 @@
 <body>
     <div id="main">
         <div id="top" v-if="location.name !== ''">
-            <h2 is="rostertitle" :location="location" ></h2>
+            <div>
+                <span class="left">
+                    <h2>{{location.name}} (week ending: {{location.weekending.format('dddd MMMM DD, YYYY')}})</h2>
+                </span>
+                <span class="right">
+                    <!-- <div><h4 class="stats title">Missing cells:</h4><h4 class="stats data" v-on:update-hours="updatestats()">{{nomissingcells}}</h4></div>
+                    <div><h4 class="stats title">Invalid cells:</h4><h4 class="stats data" v-on:update-hours="updatestats()">{{noinvalidcells}}</h4></div> -->
+                    <table class="stats">
+                        <tbody>
+                            <tr>
+                                <td class="title">Missing cells</td>
+                                <td class="data number">{{nomissingcells}}</td>
+                            </tr>
+                            <tr>
+                                <td class="title">Invalid cells</td>
+                                <td class="data number">{{noinvalidcells}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </span>
+            </div>
         </div>
         <div v-if="sections.length">
             <table>
@@ -37,7 +57,13 @@
                     </tr>
                 </tbody>
             </table>
-            <div is="rostersection" class="section" v-for="(section, index) in sections" :section="section" :key="index">
+            <div is="rostersection" 
+                class="section" 
+                v-for="(section, index) in sections" 
+                :section="section" 
+                :key="index" 
+                v-on:hours-updated="updatestats()"
+                v-on:row-deleted="rowDeleted()">
             </div>
         </div>
     </div>
@@ -76,7 +102,6 @@
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 <button id="selectlocations-button" type="button" class="btn btn-primary">OK</button>
             </div>
-            </div>
         </div>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>
@@ -85,6 +110,6 @@
     <script src="/js/moment.js"></script>
     <script src="/js/axios.min.js"></script>
     <script src="/js/vue.js"></script>
-    <script src="/js/roster-3.0-vue.js"></script>
+    <script src="/js/roster-3.1-vue.js"></script>
 </body>
 </html>
