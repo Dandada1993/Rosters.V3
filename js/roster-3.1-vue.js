@@ -315,6 +315,7 @@ let rostershift = {
     props: ['schedule'],
     template: `<input type="text"
                 class="shift-input" 
+                spellcheck="false"
                 :class="{missing :schedule.isEmpty(), invalid :!schedule.isValid()}"
                 v-on:focusin="$emit('focusin')" 
                 v-on:focusout="$emit('focusout')" 
@@ -415,6 +416,27 @@ let rosterslot = {
             }
             return false;
         },
+        noMissingCells: function() {
+            let nomissingcells = 0;
+            for(let key in this.schedules) {
+                if (this.schedules[key].isEmpty()) {
+                    nomissingcells += 1;
+                }
+            }
+            return nomissingcells;
+        },
+        noInvalidCells: function() {
+            let noinvalidcells = 0;
+            for(let key in this.schedules) {
+                if (!this.schedules[key].isValid()) {
+                    noinvalidcells += 1;
+                }
+            }
+            if (this.fullname.trim() === '') {
+                noinvalidcells += 1;
+            }
+            return noinvalidcells;
+        },
         updatehours: function() {
             this.hours = this.schedules.wed.hours() +
                     this.schedules.thu.hours() +
@@ -424,6 +446,8 @@ let rosterslot = {
                     this.schedules.mon.hours() +
                     this.schedules.tue.hours();
             this.employee.hours = this.hours;
+            this.employee.noMissingCells = this.noMissingCells();
+            this.employee.noInvalidCells = this.noInvalidCells();
             this.$emit('hours-updated');
         },
         createSchedule: function(weekDate) {
@@ -485,10 +509,23 @@ let rostersection = {
             }
             this.sectionemployees.push(newemployee);
         },
+        updateStats: function() {
+            this.section.noMissingCells = 0;
+            this.section.noInvalidCells = 0;
+            for(employee of this.sectionemployees) {
+                if(employee.noMissingCells) {
+                    this.section.noMissingCells += employee.noMissingCells;
+                }
+                if(employee.noInvalidCells) {
+                    this.section.noInvalidCells += employee.noInvalidCells;
+                }
+            }
+        },
         deleteRow: function(index) {
             //console.log(`Received request to delete index ${index}`);
             this.deletedemployees.push(this.sectionemployees[index]);
             this.sectionemployees.splice(index, 1);
+            this.updateStats();
             this.$emit('row-deleted');
         },
         hoursUpdated: function() {
@@ -498,6 +535,7 @@ let rostersection = {
                     this.section.totalhours += employee.hours;
                 }
             }
+            this.updateStats();
             this.$emit('hours-updated');
         }
     },
@@ -541,8 +579,18 @@ const app = new Vue({
     methods: {
         updatestats: function() {
             //console.log("updating stats");
-            this.nomissingcells = noMissingCells();
-            this.noinvalidcells = noInvalidCells();
+            // this.nomissingcells = noMissingCells();
+            // this.noinvalidcells = noInvalidCells();
+            this.nomissingcells = 0;
+            this.noinvalidcells = 0;
+            for(section of this.sections) {
+                if (section.noMissingCells) {
+                    this.nomissingcells += section.noMissingCells;
+                }
+                if (section.noInvalidCells) {
+                    this.noinvalidcells += section.noInvalidCells;
+                }
+            }
         },
         showRowNumbers: function() {
             numberRows();
@@ -564,6 +612,6 @@ const app = new Vue({
     },
     updated: function(){
         this.showRowNumbers();
-        this.updatestats();
+        //this.updatestats();
     }
 })
