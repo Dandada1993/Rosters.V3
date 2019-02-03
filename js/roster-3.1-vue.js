@@ -314,16 +314,32 @@ function Schedule(employee, date) {
 let rostershift = {
     props: ['schedule'],
     template: `<input type="text"
-                class="shift-input" 
                 spellcheck="false"
+                class="shift-input"  
                 :class="{missing :schedule.isEmpty(), invalid :!schedule.isValid()}"
+                v-model="schedule.shiftstring"
                 v-on:focusin="$emit('focusin')" 
-                v-on:focusout="$emit('focusout')" 
-                v-model="schedule.shiftstring" 
+                v-on:focusout="$emit('focusout')"   
                 v-on:change="valueChanged()"
                 v-on:keyup.enter="valueChanged()"/>`, 
+    data: function() {
+        return {
+            shortcuts: {
+                o: 'OFF',
+                or: 'OFF (R)',
+                s: 'SL',
+                i: 'IL'
+            }
+        }
+    },
     methods: {
         valueChanged: function() {
+            for(let key in this.shortcuts){
+                if (this.schedule.shiftstring === key) {
+                    this.schedule.shiftstring = this.shortcuts[key];
+                    break;
+                }
+            }
             if (this.schedule.isValid()){
                 this.schedule.shiftstring = this.schedule.format('short');
             }
