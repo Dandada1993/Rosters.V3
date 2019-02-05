@@ -16,7 +16,7 @@
 </head>
 <body>
     <div id="main">
-        <div id="top" v-if="location.name !== ''">
+        <div id="top" v-if="location">
             <div>
                 <span class="left">
                     <h2>{{location.name}} (week ending: {{location.weekending.format('dddd MMMM DD, YYYY')}})</h2>
@@ -39,7 +39,7 @@
                 </span>
             </div>
         </div>
-        <div v-if="sections.length">
+        <div v-if="sections">
             <table>
                 <tbody>
                     <tr class="rosterrow" data-row="0">
@@ -61,8 +61,10 @@
                 class="section" 
                 v-for="(section, index) in sections" 
                 :section="section" 
+                :employees="employees"
                 :key="index" 
                 v-on:hours-updated="hoursUpdated()"
+                v-on:add-employee="addEmployee"
                 v-on:row-deleted="rowDeleted()">
             </div>
             <div class="rostertotals">

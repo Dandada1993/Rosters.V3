@@ -44,7 +44,7 @@ function loadRosterEmployees(){
         settings.employees = results;
         // console.log(employees);
         settings.employees_loaded = true;
-        addRosterElements();
+        //addRosterElements();
     };
     let failure = function() {
         console.log('Loading roster sections failed');
@@ -58,7 +58,7 @@ function loadPositionQualifiers(){
         settings.positionqualifiers = results;
         // console.log(employees);
         settings.positionqualifiers_loaded = true;
-        addRosterElements();
+        //addRosterElements();
     };
     let failure = function() {
         console.log('Loading roster sections failed');
@@ -72,7 +72,7 @@ function addRosterElements(){
         //app.employees = employees;
         app.location.name = settings.locationName;
         app.location.weekending = moment(settings.weekending, 'MM/DD/YYYY');
-        app.sections = settings.sections;
+        //app.sections = settings.sections;
     }
 }
 
@@ -89,9 +89,13 @@ $(function () {
         $('#selectLocations-dialog').modal('hide');
         getLocIDandWeekStarting();
         // $('#top h2').html(`${settings.locationName} (weekending: ${settings.weekending.format('dddd MMMM DD, YYYY')})`);
-        loadRosterSections();
-        loadRosterEmployees();
+        //loadRosterSections();
+        //loadRosterEmployees();
         loadPositionQualifiers();
+        app.location = {
+            name: settings.locationName,
+            weekending: moment(settings.weekending, 'MM/DD/YYYY')
+        }
     });
 });
 
@@ -102,24 +106,24 @@ let numberRows = function(){
     }
 }
 
-let totalHours = function() {
-    let sum = 0;
-    let columns = $('.hours:not(.header)');
-    for(col of columns) { 
-        sum+=parseFloat(col.innerText); 
-    }
-    return sum;
-}
+// let totalHours = function() {
+//     let sum = 0;
+//     let columns = $('.hours:not(.header)');
+//     for(col of columns) { 
+//         sum+=parseFloat(col.innerText); 
+//     }
+//     return sum;
+// }
 
-let noMissingCells = function() {
-    let missingcells = $('.missing');
-    return missingcells.length;
-}
+// let noMissingCells = function() {
+//     let missingcells = $('.missing');
+//     return missingcells.length;
+// }
 
-let noInvalidCells = function() {
-    let invalidrows = $('.invalid');
-    return invalidrows.length;
-}
+// let noInvalidCells = function() {
+//     let invalidrows = $('.invalid');
+//     return invalidrows.length;
+// }
 
 let weekDate = function(day) {  //wed: 1, tue: 7
     let noofdays = day - 7;
@@ -136,12 +140,11 @@ let patterns = {
     comment: '**[A-Za-z\\s/]'
 };
 
-function Shift(employee, date, shift) {
+function Shift(date, shift) {
     if (!new.target) {
-        return new Shift(employee, date, shift);
+        return new Shift(date, shift);
     }
 
-    let _employee = employee;
     let _date = date; //Should be private with a public getting and setter
     let _startTime = null; //Should be private with a public getting and setter
     let _endTime = null; //Should be private with a public getting and setter
@@ -149,7 +152,7 @@ function Shift(employee, date, shift) {
     let _position = ''; //Should be private with a public getting and setter
     let _qualifier = ''; //Should be private with a public getting and setter
     let _comment = ''; //Should be private with a public getting and setter
-    let _isvalid = false;
+    this.isValid = false;
 
     let parse = function() {
         let times = getTime(shift);
@@ -162,14 +165,8 @@ function Shift(employee, date, shift) {
         //Position = getPosition(shift);
         //Qualifier = getQualifier(shift);
         //Comment = getComment(shift);
-        _isvalid = true;
+        this.isValid = true;
     }
-
-    Object.defineProperty(this, 'IsValid', {
-        get: function() {
-            return _isvalid;
-        }
-    })
 
     let properTime = function (value) {
         //input must be minimally \da or \dp
@@ -247,12 +244,11 @@ function Shift(employee, date, shift) {
     parse();
 }
 
-function Schedule(employee, date) {
+function Schedule(date) {
     if (!new.target) { // if you run me without new
-        return new Schedule(employee, date); // ...I will add new for you
+        return new Schedule(date); // ...I will add new for you
     };
 
-    this.employee = employee;
     this.date = date;
     this.shiftstring = '';
 
@@ -275,7 +271,7 @@ function Schedule(employee, date) {
             retval = '';
             let parts = this.shiftstring.split('/')
             for(part of parts) {
-                let shift = new Shift(this.employee, this.date, part)
+                let shift = new Shift(this.date, part)
                 if (retval !== '') {
                     retval += '/';
                 }
@@ -291,7 +287,7 @@ function Schedule(employee, date) {
             let parts = this.shiftstring.split('/')
             for(part of parts) {
                 if (isTimes(part)) {
-                    let shift = new Shift(this.employee, this.date, part)
+                    let shift = new Shift(this.date, part)
                     retval += shift.hours();
                 }
             }
@@ -352,11 +348,12 @@ let rostershiftcell = {
     props: ['schedule'],
     template: `<td 
                 class="col shift" 
-                :class="{active :isActive}" 
-                v-on:focusin="isActive = true" 
-                v-on:focusout="isActive = false">
-                    <rostershift v-on:cellchanged="$emit('update-hours')"
-                        :schedule="schedule">
+                :class="{active :isActive}" >
+                    <rostershift 
+                        :schedule="schedule"
+                        v-on:focusin="isActive = true" 
+                        v-on:focusout="isActive = false"
+                        v-on:cellchanged="$emit('update-hours')">
                     </rostershift>
                 </td>`,
     components: {
@@ -370,18 +367,10 @@ let rostershiftcell = {
 }
 
 let rosterslot = {
-    props: ['employee', 'index'],
+    props: ['employee', 'employeeindex'],
     data: function() {
         return {
-            schedules: {
-                wed: this.createSchedule(weekDate(1)), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
-                thu: this.createSchedule(weekDate(2)),
-                fri: this.createSchedule(weekDate(3)),
-                sat: this.createSchedule(weekDate(4)),
-                sun: this.createSchedule(weekDate(5)),
-                mon: this.createSchedule(weekDate(6)),
-                tue: this.createSchedule(weekDate(7))
-            },
+            schedules : this.employee.schedules,
             positionqualifiers: [],
             hours: 0
         }
@@ -399,6 +388,7 @@ let rosterslot = {
                     v-for="(schedule, index) in schedules" 
                     :schedule="schedule" 
                     :key="index"
+                    :cellindex="getCellIndex(index)"
                     v-on:update-hours="updatehours()">
                 </rostershiftcell>
                 <td class="col hours number">{{hours}}</td>
@@ -424,6 +414,33 @@ let rosterslot = {
         }
     },
     methods: {
+        getCellIndex: function(index) {
+            let ref = 0;
+            switch(index) {
+                case "wed": 
+                    ref = 1;
+                    break;
+                case "thu": 
+                    ref = 2;
+                    break;
+                case "fri": 
+                    ref = 3;
+                    break;
+                case "sat": 
+                    ref = 4;
+                    break;
+                case "sun": 
+                    ref = 5;
+                    break;
+                case "mon": 
+                    ref = 6;
+                    break;
+                case "tue": 
+                    ref = 7;
+                    break;
+            }
+            return this.employeeindex * 7 + ref;
+        },
         positionHasQualifier: function(position) {
             for(entry in settings.positionqualifiers){
                 if (settings.positionqualifiers[entry].Code === position) {
@@ -466,11 +483,6 @@ let rosterslot = {
             this.employee.noInvalidCells = this.noInvalidCells();
             this.$emit('hours-updated');
         },
-        createSchedule: function(weekDate) {
-            let schedule = new Schedule(this.employee, weekDate);
-            //schedule.shiftstring = '05:00 AM - 02:00 PM';
-            return schedule;
-        },
         emitDeleteEmployee: function() {
             this.$emit('delete-row', this.index);
         }
@@ -481,21 +493,22 @@ let rosterslot = {
 }
 
 let rostersection = {
-    props: ['section'],
+    props: ['section', 'employees'],
     template: `<div class="section" v-bind:data-sectionID="section.id">
                 <div class="title">{{section.name}}
                     <span>
-                        <button type="button" class="btn btn-sm btn-add" v-on:click="addEmployee()">Add</button>
+                        <button type="button" class="btn btn-sm btn-add" v-on:click="emitAddEmployee()">Add</button>
                     </span>
                 </div>
                 <table class="details">
                     <tbody>
                         <rosterslot 
-                            class="row" 
-                            v-for="(employee, index) in sectionemployees" 
+                            class="rosterrow" 
+                            v-for="(employee, index) in employees"
+                            v-if="employee.sectionDefID === section.id" 
                             :employee="employee" 
                             :key="index"
-                            :index="index"
+                            :employeeindex="index"
                             v-on:hours-updated="hoursUpdated()"
                             v-on:delete-row="deleteRow">
                         </rosterslot>
@@ -504,7 +517,6 @@ let rostersection = {
                </div>`,
     data: function() {
         return {
-            sectionemployees: [],
             deletedemployees: []
         }
     },
@@ -512,57 +524,17 @@ let rostersection = {
         'rosterslot' : rosterslot
     },
     methods: {
-        addEmployee: function() {
-            let newemployee = {
-                emp_no: '',
-                emp_fname: '',
-                emp_lname: '',
-                gender: '',
-                defaultPosition: this.section.defaultPosition,
-                defaultQualifier: 'REST', // change this to the default qualifier for the location
-                sectionDefID: this.section.id,
-                defaultLocation: ''
-            }
-            this.sectionemployees.push(newemployee);
-        },
-        updateStats: function() {
-            this.section.noMissingCells = 0;
-            this.section.noInvalidCells = 0;
-            for(employee of this.sectionemployees) {
-                if(employee.noMissingCells) {
-                    this.section.noMissingCells += employee.noMissingCells;
-                }
-                if(employee.noInvalidCells) {
-                    this.section.noInvalidCells += employee.noInvalidCells;
-                }
-            }
+        emitAddEmployee: function() {
+            this.$emit('add-employee', this.section);
         },
         deleteRow: function(index) {
             //console.log(`Received request to delete index ${index}`);
-            this.deletedemployees.push(this.sectionemployees[index]);
-            this.sectionemployees.splice(index, 1);
-            this.updateStats();
+            this.deletedemployees.push(this.employees[index]);
+            this.employees.splice(index, 1);
             this.$emit('row-deleted');
         },
         hoursUpdated: function() {
-            this.section.totalhours = 0;
-            for(employee of this.sectionemployees) {
-                if(employee.hours) {
-                    this.section.totalhours += employee.hours;
-                }
-            }
-            this.updateStats();
             this.$emit('hours-updated');
-        }
-    },
-    created() {
-        // this.employees = getEmployeesForSection(this.section.id);
-        this.sectionemployees = [];    
-        for(employee of settings.employees){
-            if (employee.sectionDefID === this.section.id)
-            {
-                this.sectionemployees.push(employee);
-            }
         }
     }
 }
@@ -570,11 +542,9 @@ let rostersection = {
 const app = new Vue({
     el: '#main',
     data: {
-        sections : [],
-        location: {
-            name: '',
-            weekending: null
-        },
+        sections : null,
+        employees: null,
+        location: null,
         nomissingcells: 0,
         noinvalidcells: 0,
         totalhours: 0,
@@ -584,27 +554,35 @@ const app = new Vue({
     components: {
         'rostersection' : rostersection
     },
-    // created: function() {
-    //     let url = `getlocation.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-    //     fetch(url)
-    //     .then(response => response.json())
-    //     .then(json => {
-    //         this.location = json;
-    //     })
-    // },
+    watch: {
+        location: function(newval, oldval){
+            if (newval) {
+                this.loadSections();
+                this.loadEmployees();
+                this.loadPositionQualifiers();
+            }
+        },
+        employees: function(newval, oldval) {
+            if (newval) {
+                for(employee of this.employees) {
+                    employee.schedules = this.createSchedules();
+                }
+            }
+        }
+    },
     methods: {
         updatestats: function() {
             //console.log("updating stats");
-            // this.nomissingcells = noMissingCells();
-            // this.noinvalidcells = noInvalidCells();
-            this.nomissingcells = 0;
-            this.noinvalidcells = 0;
-            for(section of this.sections) {
-                if (section.noMissingCells) {
-                    this.nomissingcells += section.noMissingCells;
-                }
-                if (section.noInvalidCells) {
-                    this.noinvalidcells += section.noInvalidCells;
+            if (this.employees) {
+                this.nomissingcells = 0;
+                this.noinvalidcells = 0;
+                for(employee of this.employees) {
+                    if(employee.noMissingCells) {
+                        this.nomissingcells += employee.noMissingCells;
+                    }
+                    if(employee.noInvalidCells) {
+                        this.noinvalidcells += employee.noInvalidCells;
+                    }
                 }
             }
         },
@@ -618,16 +596,99 @@ const app = new Vue({
         },
         hoursUpdated: function() {
             this.totalhours = 0;
-            for(section of this.sections) {
-                if (section.totalhours) {
-                    this.totalhours += section.totalhours;
+            if (this.employees) {
+                for(employee of this.employees) {
+                    if(employee.hours) {
+                        this.totalhours += employee.hours;
+                    }
                 }
             }
             this.updatestats();
+        },
+        createSchedule: function(weekDate) {
+            let schedule = new Schedule(weekDate);
+            //schedule.shiftstring = '05:00 AM - 02:00 PM';
+            return schedule;
+        },
+        createSchedules: function() {
+            return { 
+                wed: this.createSchedule(weekDate(1)), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
+                thu: this.createSchedule(weekDate(2)),
+                fri: this.createSchedule(weekDate(3)),
+                sat: this.createSchedule(weekDate(4)),
+                sun: this.createSchedule(weekDate(5)),
+                mon: this.createSchedule(weekDate(6)),
+                tue: this.createSchedule(weekDate(7))
+            }
+        },
+        getAddIndex: function(sectionid) {
+            let addindex = this.employees.length;
+            let found = false;
+            for(let i = 0; i < this.employees.length; i++) {
+                if (this.employees[i].sectionDefID === sectionid) {
+                    found = true;
+                }
+                if (found){
+                    if (this.employees[i].sectionDefID !== sectionid) {
+                        addindex = i;
+                        break;
+                    }
+                }
+            }
+            return addindex;
+        },
+        addEmployee: function(section) {
+            let newemployee = {
+                emp_no: '',
+                emp_fname: '',
+                emp_lname: '',
+                gender: '',
+                defaultPosition: section.defaultPosition,
+                defaultQualifier: 'REST', // change this to the default qualifier for the location
+                sectionDefID: section.id,
+                defaultLocation: ''
+            }
+            newemployee.schedules = this.createSchedules();
+            let addindex = this.getAddIndex(section.id);
+            //this.employees.push(newemployee);
+            this.employees.splice(addindex, 0, newemployee);
+        },
+        loadSections: function() {
+            let url = `getsections.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                this.sections = json;
+            })
+        },
+        loadEmployees: function() {
+            let url = `getemployees.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                this.employees = json;
+            })
+        },
+        loadPositionQualifiers: function() {
+            let url = `getpositionqualifiers.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                settings.positionqualifiers = json;
+            })
         }
     },
+    // created: function() {
+    //     let url = `getlocation.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+    //     fetch(url)
+    //     .then(response => response.json())
+    //     .then(json => {
+    //         this.location = json;
+    //     })
+    // },
     updated: function(){
-        this.showRowNumbers();
-        //this.updatestats();
+        this.$nextTick(function() {
+            this.showRowNumbers();
+        })
     }
 })
