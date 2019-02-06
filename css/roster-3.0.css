@@ -133,3 +133,7 @@ h4 {
     min-width: 50px;
     max-width: 50px;
 }
+
+.highlight {
+    background: #F7F30C;
+}

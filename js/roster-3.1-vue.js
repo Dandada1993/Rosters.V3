@@ -377,9 +377,14 @@ let rosterslot = {
     },
     template: `<tr>
                 <td class="col rowheader">
-                    <span class="rownumber">&nbsp;</span>
+                    <span class="rownumber">{{employeeindex + 1}}</span>
                     <span class="deleterow">
-                        <button type="button" class="btn btn-xs" v-on:click="emitDeleteEmployee()">-</button>
+                        <button 
+                            type="button" 
+                            class="btn btn-xs" 
+                            v-on:click="emitDeleteEmployee()"
+                            tabindex="-1">-
+                        </button>
                     </span>
                 </td>
                 <td class="col name" :class="{invalid :nameNotSet}">{{fullname}}</td>
@@ -388,7 +393,8 @@ let rosterslot = {
                     v-for="(schedule, index) in schedules" 
                     :schedule="schedule" 
                     :key="index"
-                    :cellindex="getCellIndex(index)"
+                    :data-row="employeeindex + 1"
+                    :data-col="index + 1"
                     v-on:update-hours="updatehours()">
                 </rostershiftcell>
                 <td class="col hours number">{{hours}}</td>
@@ -414,33 +420,6 @@ let rosterslot = {
         }
     },
     methods: {
-        getCellIndex: function(index) {
-            let ref = 0;
-            switch(index) {
-                case "wed": 
-                    ref = 1;
-                    break;
-                case "thu": 
-                    ref = 2;
-                    break;
-                case "fri": 
-                    ref = 3;
-                    break;
-                case "sat": 
-                    ref = 4;
-                    break;
-                case "sun": 
-                    ref = 5;
-                    break;
-                case "mon": 
-                    ref = 6;
-                    break;
-                case "tue": 
-                    ref = 7;
-                    break;
-            }
-            return this.employeeindex * 7 + ref;
-        },
         positionHasQualifier: function(position) {
             for(entry in settings.positionqualifiers){
                 if (settings.positionqualifiers[entry].Code === position) {
@@ -471,20 +450,17 @@ let rosterslot = {
             return noinvalidcells;
         },
         updatehours: function() {
-            this.hours = this.schedules.wed.hours() +
-                    this.schedules.thu.hours() +
-                    this.schedules.fri.hours() +
-                    this.schedules.sat.hours() +
-                    this.schedules.sun.hours() +
-                    this.schedules.mon.hours() +
-                    this.schedules.tue.hours();
+            this.hours = 0;
+            for(let key in this.schedules) {
+                this.hours += this.schedules[key].hours();
+            }
             this.employee.hours = this.hours;
             this.employee.noMissingCells = this.noMissingCells();
             this.employee.noInvalidCells = this.noInvalidCells();
             this.$emit('hours-updated');
         },
         emitDeleteEmployee: function() {
-            this.$emit('delete-row', this.index);
+            this.$emit('delete-row', this.employeeindex);
         }
     },
     mounted() {
@@ -497,7 +473,12 @@ let rostersection = {
     template: `<div class="section" v-bind:data-sectionID="section.id">
                 <div class="title">{{section.name}}
                     <span>
-                        <button type="button" class="btn btn-sm btn-add" v-on:click="emitAddEmployee()">Add</button>
+                        <button 
+                            type="button" 
+                            class="btn btn-sm btn-add" 
+                            v-on:click="emitAddEmployee()"
+                            tabindex="-1">Add
+                        </button>
                     </span>
                 </div>
                 <table class="details">
@@ -529,6 +510,9 @@ let rostersection = {
         },
         deleteRow: function(index) {
             //console.log(`Received request to delete index ${index}`);
+            for(let key in this.deletedemployees) {
+
+            }
             this.deletedemployees.push(this.employees[index]);
             this.employees.splice(index, 1);
             this.$emit('row-deleted');
@@ -586,9 +570,9 @@ const app = new Vue({
                 }
             }
         },
-        showRowNumbers: function() {
-            numberRows();
-        },
+        // showRowNumbers: function() {
+        //     numberRows();
+        // },
         rowDeleted: function() {
             //console.log('calling row deleted.')
             this.showRowNumbers();
@@ -611,15 +595,15 @@ const app = new Vue({
             return schedule;
         },
         createSchedules: function() {
-            return { 
-                wed: this.createSchedule(weekDate(1)), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
-                thu: this.createSchedule(weekDate(2)),
-                fri: this.createSchedule(weekDate(3)),
-                sat: this.createSchedule(weekDate(4)),
-                sun: this.createSchedule(weekDate(5)),
-                mon: this.createSchedule(weekDate(6)),
-                tue: this.createSchedule(weekDate(7))
-            }
+            return [ 
+                this.createSchedule(weekDate(1)), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
+                this.createSchedule(weekDate(2)),
+                this.createSchedule(weekDate(3)),
+                this.createSchedule(weekDate(4)),
+                this.createSchedule(weekDate(5)),
+                this.createSchedule(weekDate(6)),
+                this.createSchedule(weekDate(7))
+            ]
         },
         getAddIndex: function(sectionid) {
             let addindex = this.employees.length;
@@ -676,6 +660,30 @@ const app = new Vue({
             .then(json => {
                 settings.positionqualifiers = json;
             })
+        },
+        highlightCell(row, col) {
+            this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
+        },
+        unhighlightCell(row, col) {
+            this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.remove('highlight');
+        },
+        highlightCells(startrow, startcol, endrow, endcol){
+            for(let i = startrow; i <= endrow; i++){
+                for(let j = startcol; j <= endcol; j++) {
+                    this.highlightCell(i, j);
+                }
+            }
+        },
+        unhighlightAllCells() {
+            let startrow = 1;
+            let endrow = this.employees.length;
+            let startcol = 1;
+            let endcol = 7;
+            for(let i = startrow; i <= endrow; i++){
+                for(let j = startcol; j <= endcol; j++) {
+                    this.unhighlightCell(i, j);
+                }
+            }
         }
     },
     // created: function() {
@@ -686,9 +694,9 @@ const app = new Vue({
     //         this.location = json;
     //     })
     // },
-    updated: function(){
-        this.$nextTick(function() {
-            this.showRowNumbers();
-        })
-    }
+    // updated: function(){
+    //     this.$nextTick(function() {
+    //         this.showRowNumbers();
+    //     })
+    // }
 })
