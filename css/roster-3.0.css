@@ -137,3 +137,16 @@ h4 {
 .highlight {
     background: #F7F30C;
 }
+
+td.position {
+    padding: 0;
+}
+
+.position select {
+    width: 100%;
+    border: 0;
+} 
+
+.position select:focus {
+    outline: 0;
+}

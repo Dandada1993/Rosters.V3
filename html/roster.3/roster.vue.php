@@ -16,10 +16,10 @@
 </head>
 <body>
     <div id="main">
-        <div id="top" v-if="location">
+        <div id="top" v-if="location && weekending">
             <div>
                 <span class="left">
-                    <h2>{{location.name}} (week ending: {{location.weekending.format('dddd MMMM DD, YYYY')}})</h2>
+                    <h2>{{location.name}} (week ending: {{weekendingDisplay}})</h2>
                 </span>
                 <span class="right">
                     <!-- <div><h4 class="stats title">Missing cells:</h4><h4 class="stats data" v-on:update-hours="updatestats()">{{nomissingcells}}</h4></div>
@@ -62,10 +62,13 @@
                 v-for="(section, index) in sections" 
                 :section="section" 
                 :employees="employees"
+                :positions="positions"
+                :qualifiers="getQualifiers(section.defaultPosition)"
                 :key="index" 
                 v-on:hours-updated="hoursUpdated()"
                 v-on:add-employee="addEmployee"
-                v-on:row-deleted="rowDeleted()">
+                v-on:row-deleted="rowDeleted()"
+                v-on:edit-position="editPosition">
             </div>
             <div class="rostertotals">
                 <table>
@@ -78,45 +81,45 @@
                             <td class="title">Agreed to hours</td>
                             <td class="data number">{{agreedhours}}</td>
                         </tr>
+                        <tr class="rosterrow">
+                            <td class="title">Difference</td>
+                            <td class="data number">{{difference}}</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
-    <div id="selectLocations-dialog" class="modal fade" tabindex=-1 role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Select location and week ending</h4>
-                </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="selectlocations-dropdown">Locations</label>
-                    <select class="form-control" id="selectlocations-dropdown">
-                        <option value="" disabled selected>Select location</option>
-                        <?php
-                            foreach($locations as $location)
-                            {
-                                echo "<option value=\"{$location['locID']}\">{$location['name']}</options>";
-                            }
-                        ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="weekending-input">Weekending</label>
-                    <div class='input-group date' id='weekending'>
-                        <input id="weekending-input" type='text' class="form-control" />
-                        <span class="input-group-addon">
-                            <span class="glyphicon glyphicon-calendar">
-                            </span>
-                        </span>
+        <div id="selectLocations-dialog" class="modal fade" tabindex=-1 role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Select location and week ending</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="selectlocations-dropdown">Locations</label>
+                            <select class="form-control" id="selectlocations-dropdown" v-on:change="locationChanged">
+                                <option value="" disabled selected>Select location</option>
+                                <option v-for="loc in locations" :value="loc.locID">{{loc.name}}</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="weekending-input">Weekending</label>
+                            <div class='input-group date' id='weekending'>
+                                <input id="weekending-input" type='text' class="form-control"/>
+                                <span class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar">
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button id="selectlocations-button" type="button" class="btn btn-primary" v-on:click="modalOKClicked">OK</button>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                <button id="selectlocations-button" type="button" class="btn btn-primary">OK</button>
             </div>
         </div>
     </div>

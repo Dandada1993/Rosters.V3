@@ -1,80 +1,80 @@
-let settings = {
-        locID : null,
-        locationName : '',
-        weekstarting : null,
-        weekending : null,
-        sections : null,
-        employees : null,
-        positionqualifiers : null,
-        sections_loaded : false,
-        employees_loaded : false,
-        positionqualifiers_loaded : false
-    };
+// let settings = {
+//         locID : null,
+//         locationName : '',
+//         weekstarting : null,
+//         weekending : null,
+//         sections : null,
+//         employees : null,
+//         positionqualifiers : null,
+//         sections_loaded : false,
+//         employees_loaded : false,
+//         positionqualifiers_loaded : false
+//     };
 
-function getLocIDandWeekStarting(){
-    settings.locID = $('#selectlocations-dropdown').val();
-    settings.locationName = $('#selectlocations-dropdown option:selected').text();
-    //console.log(locID);
-    settings.weekending = $('#weekending-input').val(); //moment($('#weekending-input').val(), "MM/DD/YYYY");
-    settings.weekstarting = moment(settings.weekending, "MM/DD/YYYY").subtract(6, 'days');
-    //console.log(weekstarting);
-};
+// function getLocIDandWeekStarting(){
+//     settings.locID = $('#selectlocations-dropdown').val();
+//     settings.locationName = $('#selectlocations-dropdown option:selected').text();
+//     //console.log(locID);
+//     settings.weekending = $('#weekending-input').val(); //moment($('#weekending-input').val(), "MM/DD/YYYY");
+//     settings.weekstarting = moment(settings.weekending, "MM/DD/YYYY").subtract(6, 'days');
+//     //console.log(weekstarting);
+// };
 
-function callAsyncGET(url, success, failure) {
-    $.ajax({url:url}).done(success).fail(failure);
-}
+// function callAsyncGET(url, success, failure) {
+//     $.ajax({url:url}).done(success).fail(failure);
+// }
 
-function loadRosterSections(){
-    let url = `getsections.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-    let success = function(results) {
-        settings.sections = results;
-        //console.log(sections);
-        settings.sections_loaded = true;
-        addRosterElements();
-    };
-    let failure = function() {
-        console.log('Loading roster sections failed');
-    };
-    callAsyncGET(url, success, failure);
-}
+// function loadRosterSections(){
+//     let url = `getsections.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+//     let success = function(results) {
+//         settings.sections = results;
+//         //console.log(sections);
+//         settings.sections_loaded = true;
+//         addRosterElements();
+//     };
+//     let failure = function() {
+//         console.log('Loading roster sections failed');
+//     };
+//     callAsyncGET(url, success, failure);
+// }
 
-function loadRosterEmployees(){
-    let url = `getemployees.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-    let success = function(results) {
-        settings.employees = results;
-        // console.log(employees);
-        settings.employees_loaded = true;
-        //addRosterElements();
-    };
-    let failure = function() {
-        console.log('Loading roster sections failed');
-    };
-    callAsyncGET(url, success, failure);
-}
+// function loadRosterEmployees(){
+//     let url = `getemployees.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+//     let success = function(results) {
+//         settings.employees = results;
+//         // console.log(employees);
+//         settings.employees_loaded = true;
+//         //addRosterElements();
+//     };
+//     let failure = function() {
+//         console.log('Loading roster sections failed');
+//     };
+//     callAsyncGET(url, success, failure);
+// }
 
-function loadPositionQualifiers(){
-    let url = `getpositionqualifiers.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-    let success = function(results) {
-        settings.positionqualifiers = results;
-        // console.log(employees);
-        settings.positionqualifiers_loaded = true;
-        //addRosterElements();
-    };
-    let failure = function() {
-        console.log('Loading roster sections failed');
-    };
-    callAsyncGET(url, success, failure);
-}
+// function loadPositionQualifiers(){
+//     let url = `getpositionqualifiers.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+//     let success = function(results) {
+//         settings.positionqualifiers = results;
+//         // console.log(employees);
+//         settings.positionqualifiers_loaded = true;
+//         //addRosterElements();
+//     };
+//     let failure = function() {
+//         console.log('Loading roster sections failed');
+//     };
+//     callAsyncGET(url, success, failure);
+// }
 
-function addRosterElements(){
-    if (settings.sections_loaded && settings.employees_loaded && settings.positionqualifiers_loaded)
-    {
-        //app.employees = employees;
-        app.location.name = settings.locationName;
-        app.location.weekending = moment(settings.weekending, 'MM/DD/YYYY');
-        //app.sections = settings.sections;
-    }
-}
+// function addRosterElements(){
+//     if (settings.sections_loaded && settings.employees_loaded && settings.positionqualifiers_loaded)
+//     {
+//         //app.employees = employees;
+//         app.location.name = settings.locationName;
+//         app.location.weekending = moment(settings.weekending, 'MM/DD/YYYY');
+//         //app.sections = settings.sections;
+//     }
+// }
 
 $(function () {
     $('#weekending').datepicker({
@@ -85,49 +85,26 @@ $(function () {
     $('#selectLocations-dialog').on('shown.bs.modal', function () {
         $('#selectlocations-dropdown').focus()
     });
-    $('#selectlocations-button').on('click', function(){
-        $('#selectLocations-dialog').modal('hide');
-        getLocIDandWeekStarting();
-        // $('#top h2').html(`${settings.locationName} (weekending: ${settings.weekending.format('dddd MMMM DD, YYYY')})`);
-        //loadRosterSections();
-        //loadRosterEmployees();
-        loadPositionQualifiers();
-        app.location = {
-            name: settings.locationName,
-            weekending: moment(settings.weekending, 'MM/DD/YYYY')
-        }
-    });
+    // $('#selectlocations-button').on('click', function(){
+    //     $('#selectLocations-dialog').modal('hide');
+    //     getLocIDandWeekStarting();
+    //     // $('#top h2').html(`${settings.locationName} (weekending: ${settings.weekending.format('dddd MMMM DD, YYYY')})`);
+    //     //loadRosterSections();
+    //     //loadRosterEmployees();
+    //     //loadPositionQualifiers();
+    //     app.location = {
+    //         name: settings.locationName,
+    //         weekending: moment(settings.weekending, 'MM/DD/YYYY')
+    //     }
+    // });
 });
 
-let numberRows = function(){
-    let rowheaders = $('.rownumber');
-    for(let i = 0; i < rowheaders.length; i++){
-        $(rowheaders[i]).html((i+1));
-    }
+function hideModal() {
+    $('#selectLocations-dialog').modal('hide');
 }
 
-// let totalHours = function() {
-//     let sum = 0;
-//     let columns = $('.hours:not(.header)');
-//     for(col of columns) { 
-//         sum+=parseFloat(col.innerText); 
-//     }
-//     return sum;
-// }
-
-// let noMissingCells = function() {
-//     let missingcells = $('.missing');
-//     return missingcells.length;
-// }
-
-// let noInvalidCells = function() {
-//     let invalidrows = $('.invalid');
-//     return invalidrows.length;
-// }
-
-let weekDate = function(day) {  //wed: 1, tue: 7
-    let noofdays = day - 7;
-    return moment(settings.weekending, 'MM/DD/YYYY').add(noofdays, 'days');
+function getWeekending() {
+    return $('#weekending-input').val();
 }
 
 let patterns = { 
@@ -366,8 +343,45 @@ let rostershiftcell = {
     }
 }
 
+let positionselector = {
+    props: ['employee','positions','hasqualifier'],
+    template: `<td class="col position">
+                    <select v-model="selected">
+                        <option 
+                            v-for="(position, index) in positions" 
+                            :key="index"
+                            :value="position">{{position}}</option>
+                    </select>
+               </td>`,
+    data: function() {
+        return {
+            selected: this.defaultPosition()
+        }
+    },
+    watch: {
+        selected: function(newValue, oldValaue) {
+            let parts = newValue.split(' ');
+            if (parts.length === 2) {
+                this.employee.defaultQualifier = parts[0];
+                this.employee.defaultPosition = parts[1];
+            }else{
+                this.employee.defaultPosition = parts[0];
+            }
+        }
+    },
+    methods: {
+        defaultPosition: function() {
+            let position = this.employee.defaultPosition;
+            if (this.employee.defaultQualifier !== null && this.hasqualifier === 1){
+                position = `${this.employee.defaultQualifier} ${position}`;
+            }
+            return position;
+        }
+    }
+}
+
 let rosterslot = {
-    props: ['employee', 'employeeindex'],
+    props: ['employee', 'employeeindex','hasqualifier', 'positions'],
     data: function() {
         return {
             schedules : this.employee.schedules,
@@ -388,7 +402,11 @@ let rosterslot = {
                     </span>
                 </td>
                 <td class="col name" :class="{invalid :nameNotSet}">{{fullname}}</td>
-                <td class="col position">{{position}}</td>
+                <positionselector 
+                    :employee="employee" 
+                    :positions="positions"
+                    :hasqualifier="hasqualifier">
+                </positionselector>
                 <rostershiftcell 
                     v-for="(schedule, index) in schedules" 
                     :schedule="schedule" 
@@ -400,7 +418,8 @@ let rosterslot = {
                 <td class="col hours number">{{hours}}</td>
                </tr>`,
     components: {
-       'rostershiftcell' : rostershiftcell
+       'rostershiftcell' : rostershiftcell,
+       'positionselector' : positionselector
     },
     computed: {
         fullname: function() {
@@ -408,7 +427,7 @@ let rosterslot = {
         },
         position: function() {
             let position = this.employee.defaultPosition;
-            if (this.employee.defaultQualifier !== null && this.positionHasQualifier(position)){
+            if (this.employee.defaultQualifier !== null && this.hasqualifier === 1){
                 position = `${this.employee.defaultQualifier} ${position}`;
             }
             return position;
@@ -420,14 +439,14 @@ let rosterslot = {
         }
     },
     methods: {
-        positionHasQualifier: function(position) {
-            for(entry in settings.positionqualifiers){
-                if (settings.positionqualifiers[entry].Code === position) {
-                    return true;
-                }
-            }
-            return false;
-        },
+        // positionHasQualifier: function(position) {
+        //     for(entry in settings.positionqualifiers){
+        //         if (settings.positionqualifiers[entry].Code === position) {
+        //             return true;
+        //         }
+        //     }
+        //     return false;
+        // },
         noMissingCells: function() {
             let nomissingcells = 0;
             for(let key in this.schedules) {
@@ -461,6 +480,10 @@ let rosterslot = {
         },
         emitDeleteEmployee: function() {
             this.$emit('delete-row', this.employeeindex);
+        },
+        emitEditPosition: function() {
+            //console.log('Default position double clicked');
+            this.$emit('edit-position', this.employeeindex);
         }
     },
     mounted() {
@@ -469,7 +492,7 @@ let rosterslot = {
 }
 
 let rostersection = {
-    props: ['section', 'employees'],
+    props: ['section', 'employees', 'qualifiers', 'positions'],
     template: `<div class="section" v-bind:data-sectionID="section.id">
                 <div class="title">{{section.name}}
                     <span>
@@ -490,8 +513,11 @@ let rostersection = {
                             :employee="employee" 
                             :key="index"
                             :employeeindex="index"
+                            :positions="positions"
+                            :hasqualifier = "hasQualifier"
                             v-on:hours-updated="hoursUpdated()"
-                            v-on:delete-row="deleteRow">
+                            v-on:delete-row="deleteRow"
+                            v-on:edit-position="emitEditPosition">
                         </rosterslot>
                     </tbody>
                 </table>
@@ -503,6 +529,14 @@ let rostersection = {
     },
     components: {
         'rosterslot' : rosterslot
+    },
+    computed: {
+        hasQualifier: function() {
+            if (this.qualifiers.length > 0) {
+                return 1;
+            }
+            return 0;
+        }
     },
     methods: {
         emitAddEmployee: function() {
@@ -519,6 +553,9 @@ let rostersection = {
         },
         hoursUpdated: function() {
             this.$emit('hours-updated');
+        },
+        emitEditPosition(index) {
+            this.$emit('edit-position', index);
         }
     }
 }
@@ -526,9 +563,15 @@ let rostersection = {
 const app = new Vue({
     el: '#main',
     data: {
+        locations: null,
         sections : null,
         employees: null,
+        positionQualifiers: null,
         location: null,
+        locID: null,
+        weekending: null,
+        weekstarting: null,
+        positions: [],
         nomissingcells: 0,
         noinvalidcells: 0,
         totalhours: 0,
@@ -541,9 +584,11 @@ const app = new Vue({
     watch: {
         location: function(newval, oldval){
             if (newval) {
-                this.loadSections();
-                this.loadEmployees();
                 this.loadPositionQualifiers();
+                this.loadEmployees();
+                this.loadSections();
+                this.loadAllocatedHours();
+                this.loadPositions();
             }
         },
         employees: function(newval, oldval) {
@@ -552,6 +597,14 @@ const app = new Vue({
                     employee.schedules = this.createSchedules();
                 }
             }
+        }
+    },
+    computed: {
+        difference: function() {
+            return this.agreedhours - this.totalhours;
+        },
+        weekendingDisplay: function() {
+            return moment(this.weekending, 'MM/DD/YYYY').format('dddd MMMM DD, YYYY');
         }
     },
     methods: {
@@ -570,9 +623,6 @@ const app = new Vue({
                 }
             }
         },
-        // showRowNumbers: function() {
-        //     numberRows();
-        // },
         rowDeleted: function() {
             //console.log('calling row deleted.')
             this.showRowNumbers();
@@ -589,6 +639,10 @@ const app = new Vue({
             }
             this.updatestats();
         },
+        weekDate: function(day) {  //wed: 1, tue: 7
+            let noofdays = day - 7;
+            return moment(this.weekending, 'MM/DD/YYYY').add(noofdays, 'days');
+        },
         createSchedule: function(weekDate) {
             let schedule = new Schedule(weekDate);
             //schedule.shiftstring = '05:00 AM - 02:00 PM';
@@ -596,13 +650,13 @@ const app = new Vue({
         },
         createSchedules: function() {
             return [ 
-                this.createSchedule(weekDate(1)), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
-                this.createSchedule(weekDate(2)),
-                this.createSchedule(weekDate(3)),
-                this.createSchedule(weekDate(4)),
-                this.createSchedule(weekDate(5)),
-                this.createSchedule(weekDate(6)),
-                this.createSchedule(weekDate(7))
+                this.createSchedule(this.weekDate(1)), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
+                this.createSchedule(this.weekDate(2)),
+                this.createSchedule(this.weekDate(3)),
+                this.createSchedule(this.weekDate(4)),
+                this.createSchedule(this.weekDate(5)),
+                this.createSchedule(this.weekDate(6)),
+                this.createSchedule(this.weekDate(7))
             ]
         },
         getAddIndex: function(sectionid) {
@@ -628,7 +682,7 @@ const app = new Vue({
                 emp_lname: '',
                 gender: '',
                 defaultPosition: section.defaultPosition,
-                defaultQualifier: 'REST', // change this to the default qualifier for the location
+                defaultQualifier: this.location.defaultQualifier,
                 sectionDefID: section.id,
                 defaultLocation: ''
             }
@@ -637,8 +691,22 @@ const app = new Vue({
             //this.employees.push(newemployee);
             this.employees.splice(addindex, 0, newemployee);
         },
+        getQualifiers: function(position) {
+            let qualifiers = [];
+            for(let key in this.positionQualifiers) {
+                if (this.positionQualifiers[key].Code === position) {
+                    qualifiers.push(this.positionQualifiers[key]);
+                }
+            }
+            return qualifiers;
+        },
+        editPosition: function(index) {
+            //console.log(`Edit position for employee ${index}`);
+            let employee = this.employees[index];
+
+        },
         loadSections: function() {
-            let url = `getsections.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+            let url = `getsections.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             fetch(url)
             .then(response => response.json())
             .then(json => {
@@ -646,7 +714,7 @@ const app = new Vue({
             })
         },
         loadEmployees: function() {
-            let url = `getemployees.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+            let url = `getemployees.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             fetch(url)
             .then(response => response.json())
             .then(json => {
@@ -654,12 +722,53 @@ const app = new Vue({
             })
         },
         loadPositionQualifiers: function() {
-            let url = `getpositionqualifiers.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
+            let url = `getpositionqualifiers.php?locID=${this.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             fetch(url)
             .then(response => response.json())
             .then(json => {
-                settings.positionqualifiers = json;
+                this.positionQualifiers = json;
             })
+        },
+        loadAllocatedHours: function() {
+            let url = `getallocatedhours.php?locID=${this.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                this.agreedhours = parseInt(json[0].allocatedhours); //json;
+            })
+        },
+        loadPositions: function() {
+            let url = `getpositions.php?locID=${this.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                this.extractPositions(json);
+            })
+        },
+        extractPositions: function(positionsarray) {
+            this.positions = [];
+            for(let i = 0; i < positionsarray.length; i++) {
+                this.positions.push(positionsarray[i].position);
+            }
+        },
+        locationChanged: function(event) {
+            //console.log(event.target.value);
+            this.locID = event.target.value;
+        },
+        modalOKClicked: function(event) {
+            this.weekending = getWeekending();
+            if (this.weekending) {
+                this.weekstarting = moment(this.weekending, "MM/DD/YYYY").subtract(6, 'days');
+            }
+            if (this.locID && this.weekending) {
+                for(let location of this.locations) {
+                    if (location.locID === this.locID) {
+                        this.location = location;
+                        break;
+                    }
+                }
+                hideModal();
+            }
         },
         highlightCell(row, col) {
             this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
@@ -686,14 +795,14 @@ const app = new Vue({
             }
         }
     },
-    // created: function() {
-    //     let url = `getlocation.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-    //     fetch(url)
-    //     .then(response => response.json())
-    //     .then(json => {
-    //         this.location = json;
-    //     })
-    // },
+    created: function() {
+        let url = `getlocations-2.php`;
+        fetch(url)
+        .then(response => response.json())
+        .then(json => {
+            this.locations = json;
+        })
+    }
     // updated: function(){
     //     this.$nextTick(function() {
     //         this.showRowNumbers();
