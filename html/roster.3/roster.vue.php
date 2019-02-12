@@ -67,8 +67,8 @@
                 :key="index" 
                 v-on:hours-updated="hoursUpdated()"
                 v-on:add-employee="addEmployee"
-                v-on:row-deleted="rowDeleted()"
-                v-on:edit-position="editPosition">
+                v-on:delete-employee="deleteEmployee"
+                v-on:select-employee="selectEmployee">
             </div>
             <div class="rostertotals">
                 <table>
@@ -122,6 +122,11 @@
                 </div>
             </div>
         </div>
+        <div is="selectemployee"
+            :deletedemployees="deletedemployees"
+            :otheremployees="otheremployees"
+            v-on:employee-selected="employeeSelected"
+        ></div>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>
     <script src="/js/bootstrap.min.js"></script>

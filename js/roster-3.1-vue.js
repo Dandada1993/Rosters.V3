@@ -1,80 +1,4 @@
-// let settings = {
-//         locID : null,
-//         locationName : '',
-//         weekstarting : null,
-//         weekending : null,
-//         sections : null,
-//         employees : null,
-//         positionqualifiers : null,
-//         sections_loaded : false,
-//         employees_loaded : false,
-//         positionqualifiers_loaded : false
-//     };
 
-// function getLocIDandWeekStarting(){
-//     settings.locID = $('#selectlocations-dropdown').val();
-//     settings.locationName = $('#selectlocations-dropdown option:selected').text();
-//     //console.log(locID);
-//     settings.weekending = $('#weekending-input').val(); //moment($('#weekending-input').val(), "MM/DD/YYYY");
-//     settings.weekstarting = moment(settings.weekending, "MM/DD/YYYY").subtract(6, 'days');
-//     //console.log(weekstarting);
-// };
-
-// function callAsyncGET(url, success, failure) {
-//     $.ajax({url:url}).done(success).fail(failure);
-// }
-
-// function loadRosterSections(){
-//     let url = `getsections.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-//     let success = function(results) {
-//         settings.sections = results;
-//         //console.log(sections);
-//         settings.sections_loaded = true;
-//         addRosterElements();
-//     };
-//     let failure = function() {
-//         console.log('Loading roster sections failed');
-//     };
-//     callAsyncGET(url, success, failure);
-// }
-
-// function loadRosterEmployees(){
-//     let url = `getemployees.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-//     let success = function(results) {
-//         settings.employees = results;
-//         // console.log(employees);
-//         settings.employees_loaded = true;
-//         //addRosterElements();
-//     };
-//     let failure = function() {
-//         console.log('Loading roster sections failed');
-//     };
-//     callAsyncGET(url, success, failure);
-// }
-
-// function loadPositionQualifiers(){
-//     let url = `getpositionqualifiers.php?locID=${settings.locID}&weekstarting=${settings.weekstarting.format('YYYY-MM-DD')}`;
-//     let success = function(results) {
-//         settings.positionqualifiers = results;
-//         // console.log(employees);
-//         settings.positionqualifiers_loaded = true;
-//         //addRosterElements();
-//     };
-//     let failure = function() {
-//         console.log('Loading roster sections failed');
-//     };
-//     callAsyncGET(url, success, failure);
-// }
-
-// function addRosterElements(){
-//     if (settings.sections_loaded && settings.employees_loaded && settings.positionqualifiers_loaded)
-//     {
-//         //app.employees = employees;
-//         app.location.name = settings.locationName;
-//         app.location.weekending = moment(settings.weekending, 'MM/DD/YYYY');
-//         //app.sections = settings.sections;
-//     }
-// }
 
 $(function () {
     $('#weekending').datepicker({
@@ -85,18 +9,6 @@ $(function () {
     $('#selectLocations-dialog').on('shown.bs.modal', function () {
         $('#selectlocations-dropdown').focus()
     });
-    // $('#selectlocations-button').on('click', function(){
-    //     $('#selectLocations-dialog').modal('hide');
-    //     getLocIDandWeekStarting();
-    //     // $('#top h2').html(`${settings.locationName} (weekending: ${settings.weekending.format('dddd MMMM DD, YYYY')})`);
-    //     //loadRosterSections();
-    //     //loadRosterEmployees();
-    //     //loadPositionQualifiers();
-    //     app.location = {
-    //         name: settings.locationName,
-    //         weekending: moment(settings.weekending, 'MM/DD/YYYY')
-    //     }
-    // });
 });
 
 function hideModal() {
@@ -105,6 +17,14 @@ function hideModal() {
 
 function getWeekending() {
     return $('#weekending-input').val();
+}
+
+function showSelectEmployeeModal() {
+    $('#selectemployee-dialog').modal('show');
+}
+
+function hideSelectEmployeeModal() {
+    $('#selectemployee-dialog').modal('hide');
 }
 
 let patterns = { 
@@ -401,7 +321,11 @@ let rosterslot = {
                         </button>
                     </span>
                 </td>
-                <td class="col name" :class="{invalid :nameNotSet}">{{fullname}}</td>
+                <td 
+                    class="col name" 
+                    :class="{invalid :nameNotSet}"
+                    v-on:dblclick="$emit('select-employee', employeeindex)"
+                >{{fullname}}</td>
                 <positionselector 
                     :employee="employee" 
                     :positions="positions"
@@ -439,14 +363,6 @@ let rosterslot = {
         }
     },
     methods: {
-        // positionHasQualifier: function(position) {
-        //     for(entry in settings.positionqualifiers){
-        //         if (settings.positionqualifiers[entry].Code === position) {
-        //             return true;
-        //         }
-        //     }
-        //     return false;
-        // },
         noMissingCells: function() {
             let nomissingcells = 0;
             for(let key in this.schedules) {
@@ -479,11 +395,7 @@ let rosterslot = {
             this.$emit('hours-updated');
         },
         emitDeleteEmployee: function() {
-            this.$emit('delete-row', this.employeeindex);
-        },
-        emitEditPosition: function() {
-            //console.log('Default position double clicked');
-            this.$emit('edit-position', this.employeeindex);
+            this.$emit('delete-employee', this.employeeindex);
         }
     },
     mounted() {
@@ -516,17 +428,12 @@ let rostersection = {
                             :positions="positions"
                             :hasqualifier = "hasQualifier"
                             v-on:hours-updated="hoursUpdated()"
-                            v-on:delete-row="deleteRow"
-                            v-on:edit-position="emitEditPosition">
+                            v-on:delete-employee="emitDeleteEmployee"
+                            v-on:select-employee="emitSelectEmployee">
                         </rosterslot>
                     </tbody>
                 </table>
                </div>`,
-    data: function() {
-        return {
-            deletedemployees: []
-        }
-    },
     components: {
         'rosterslot' : rosterslot
     },
@@ -542,22 +449,107 @@ let rostersection = {
         emitAddEmployee: function() {
             this.$emit('add-employee', this.section);
         },
-        deleteRow: function(index) {
-            //console.log(`Received request to delete index ${index}`);
-            for(let key in this.deletedemployees) {
-
-            }
-            this.deletedemployees.push(this.employees[index]);
-            this.employees.splice(index, 1);
-            this.$emit('row-deleted');
+        emitDeleteEmployee: function(index) {
+            this.$emit('delete-employee', index);
+        },
+        emitSelectEmployee: function(index) {
+            this.$emit('select-employee', index);
         },
         hoursUpdated: function() {
             this.$emit('hours-updated');
-        },
-        emitEditPosition(index) {
-            this.$emit('edit-position', index);
         }
     }
+}
+
+let employeeli = {
+    props: ['employee', 'other'],
+    data: function() {
+        return {
+            selected: false
+        }
+    },
+    template: `<li
+                    v:on:click="$emit('click', employee)"
+                    v-on:dblclick="$emit('dblclick', employee">{{fullnameandnumber}}
+               </li>`,
+    computed: {
+        fullnameandnumber: function() {
+            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no})`;
+        }
+    },
+    methods: {
+        cellclicked: function() {
+            this.selected = true;
+        }
+    }
+}
+
+let selectemployee = {
+    props: ['deletedemployees', 'otheremployees'],
+    data: function() {
+        return {
+            searchText: '',
+            selectedEmployee: null
+        }
+    },
+    template: `<div id="selectemployee-dialog" class="modal fade" tabindex=-1 role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title">Select an employee</h4>
+                                <h5 class="modal-title">Double click to select</h5>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <input type="text" v-model="searchText">
+                                    <ul>
+                                        <li 
+                                            class="local"
+                                            v-for="employee in deletedemployees" 
+                                            v-if="deletedemployees.length > 0"
+                                            v-show="matchesSearch(employee)"
+                                            v-on:dblclick="employeeDblClicked(employee)">{{fullnameandnumber(employee)}}</li>
+                                        <li 
+                                            v-for="other in otheremployees"
+                                            v-if="otheremployees.length > 0"
+                                            v-show="matchesSearch(other)"
+                                            v-on:dblclick="visitingEmployeeDblClicked(other)">{{fullnameandnumber(other)}}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+               </div>`,
+    methods: {
+        fullname: function(employee) {
+            return `${employee.emp_fname} ${employee.emp_lname}`;
+        },
+        fullnameandnumber: function(employee) {
+            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no})`;
+        },
+        matchesSearch: function(employee) {
+            let fullname = this.fullname(employee);
+            return fullname.toLowerCase().includes(this.searchText.toLowerCase());
+        },
+        employeeDblClicked: function(employee) {
+            //console.log(`employee double clicked ${employee.emp_no}`);
+            this.selectedEmployee = employee;
+            this.emitEmployeeSelected(employee);
+        },
+        visitingEmployeeDblClicked: function(employee) {
+            //console.log(`visiting employee double clicked ${employee.emp_no}`);
+            employee.other = true;
+            this.employeeDblClicked(employee);
+        },
+        emitEmployeeSelected: function(employee) {
+            this.searchText = '';
+            this.$emit('employee-selected', employee);
+        }
+     }
 }
 
 const app = new Vue({
@@ -575,11 +567,15 @@ const app = new Vue({
         nomissingcells: 0,
         noinvalidcells: 0,
         totalhours: 0,
-        agreedhours: 0
+        agreedhours: 0,
+        deletedemployees: [],
+        otheremployees: [],
+        editEmployeeIndex: -1
         // additionalhours: 0
     },
     components: {
-        'rostersection' : rostersection
+        'rostersection' : rostersection,
+        'selectemployee' : selectemployee
     },
     watch: {
         location: function(newval, oldval){
@@ -589,6 +585,7 @@ const app = new Vue({
                 this.loadSections();
                 this.loadAllocatedHours();
                 this.loadPositions();
+                this.loadOtherEmployees();
             }
         },
         employees: function(newval, oldval) {
@@ -623,9 +620,20 @@ const app = new Vue({
                 }
             }
         },
-        rowDeleted: function() {
+        deleteEmployee: function(index) {
             //console.log('calling row deleted.')
-            this.showRowNumbers();
+            //this.showRowNumbers();
+            let target = this.employees[index];
+            if (target.emp_no) {  //if emp_no has not been assigned must be a blank row so ignore
+                if (target.other) {
+                    this.otheremployees.push(target)
+                    this.otheremployees.sort(this.sortEmployees);
+                } else {
+                    this.deletedemployees.push(target);
+                    this.deletedemployees.sort(this.sortEmployees);
+                }
+            }
+            this.employees.splice(index, 1); //remove employee
             this.updatestats();
         },
         hoursUpdated: function() {
@@ -700,11 +708,6 @@ const app = new Vue({
             }
             return qualifiers;
         },
-        editPosition: function(index) {
-            //console.log(`Edit position for employee ${index}`);
-            let employee = this.employees[index];
-
-        },
         loadSections: function() {
             let url = `getsections.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             fetch(url)
@@ -734,7 +737,7 @@ const app = new Vue({
             fetch(url)
             .then(response => response.json())
             .then(json => {
-                this.agreedhours = parseInt(json[0].allocatedhours); //json;
+                this.agreedhours = parseFloat(json[0].allocatedhours); //json;
             })
         },
         loadPositions: function() {
@@ -743,6 +746,16 @@ const app = new Vue({
             .then(response => response.json())
             .then(json => {
                 this.extractPositions(json);
+            })
+        },
+        loadOtherEmployees: function() {
+            let url = `getotheremployees.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                if (json) {
+                    this.otheremployees = json;
+                }
             })
         },
         extractPositions: function(positionsarray) {
@@ -769,6 +782,50 @@ const app = new Vue({
                 }
                 hideModal();
             }
+        },
+        selectEmployee: function(index) {
+            this.editEmployeeIndex = index;
+            if (this.deletedemployees.length > 0 || this.otheremployees.length > 0) {
+                showSelectEmployeeModal();
+            }
+        },
+        employeeSelected: function(employee) {
+            //console.log('Employee selected');
+            hideSelectEmployeeModal();
+            this.employees[this.editEmployeeIndex].emp_no = employee.emp_no;
+            this.employees[this.editEmployeeIndex].emp_fname = employee.emp_fname;
+            this.employees[this.editEmployeeIndex].emp_lname = employee.emp_lname;
+            if (employee.other) {
+                this.employees[this.editEmployeeIndex].other = true;
+                this.removeEmployee(this.otheremployees, employee);
+            } else {
+                this.removeEmployee(this.deletedemployees, employee);
+            }
+            this.editEmployeeIndex = -1;
+            this.updatestats();
+        },
+        removeEmployee: function(list, employee) {
+            let index = -1;
+            for(let i = 0; i < list.length; i++) {
+                if (list[i].emp_no === employee.emp_no) {
+                    index = i;
+                    break;
+                }
+            }
+            list.splice(index, 1);
+        },
+        sortEmployees: function(empA, empB) {
+            var nameA = `${empA.emp_fname} ${empA.emp_lname}`.toUpperCase(); // ignore upper and lowercase
+            var nameB = `${empB.emp_fname} ${empB.emp_lname}`.toUpperCase(); // ignore upper and lowercase
+            if (nameA < nameB) {
+              return -1;
+            }
+            if (nameA > nameB) {
+              return 1;
+            }
+          
+            // names must be equal
+            return 0;
         },
         highlightCell(row, col) {
             this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
