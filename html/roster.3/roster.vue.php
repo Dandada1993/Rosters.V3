@@ -134,6 +134,6 @@
     <script src="/js/moment.js"></script>
     <script src="/js/axios.min.js"></script>
     <script src="/js/vue.js"></script>
-    <script src="/js/roster-3.1-vue.js"></script>
+    <script src="/js/roster-3.2-vue.js"></script>
 </body>
 </html>
