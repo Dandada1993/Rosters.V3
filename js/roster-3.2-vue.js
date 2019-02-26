@@ -1,4 +1,9 @@
+let data = {
+    employees: [],
+    location: null
+}
 
+const EventBus = new Vue();
 
 $(function () {
     $('#weekending').datepicker({
@@ -8,7 +13,7 @@ $(function () {
     $('#selectLocations-dialog').modal('show');
     $('#selectLocations-dialog').on('shown.bs.modal', function () {
         $('#selectlocations-dropdown').focus()
-    });
+    }); 
 });
 
 function hideModal() {
@@ -27,11 +32,21 @@ function hideSelectEmployeeModal() {
     $('#selectemployee-dialog').modal('hide');
 }
 
+function showShiftEntryModal() {
+    $('#shiftentry-dialog').modal('show');
+    // $('#starttime').timepicker();
+    // $('#endtime').timepicker();
+}
+
+function hideShiftEntryModal() {
+    $('#shiftentry-dialog').modal('hide');
+}
+
 let patterns = { 
     excudecode: '^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
     times: '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
     location: '(?:(?:\\s+)(?:@?)(~))', //'(?:(?:\\s+)@([a-z]{3,4}))'
-    position: '(?:(?:\\s+)((?:#?)(rest|barn|dtru)?)?\\s?(cr|fc|pr|su|cl|ck))',
+    position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(cr|fc|pr|sr|cl|ck))',
     time: '^(0?\\d|1(?:0|1|2))((?:(\\:)?)((?:0|3)0))?\\s*((?:a|p)m?)',
     qualifier: '(rest|barn|dtru)',
     comment: '(?:\\*\\*)([A-Za-z\\s]+)'
@@ -104,7 +119,13 @@ let Validator = {
         let regex = new RegExp(patterns.position, 'i');
         let result = regex.exec(value);
         if (result) {
-            return { qualifier:result[2], position:result[3] }
+            let qualifier;
+            let position;
+            if (result[2]) {
+                qualifier = result[2];
+            }
+            position = result[3];
+            return { qualifier: qualifier, position: position }
         } else {
             return { qualifier:'', position:'' }
         }
@@ -155,7 +176,7 @@ let Validator = {
         for(let i = 0; i < shifts.length; i++) {
             valid = valid && this.validShift(shifts[i]);
         }
-        if (shifts.length > 1) { //check that the shifts do not overlap
+        if (valid && shifts.length > 1) { //check that the shifts do not overlap
             let firstShift = this.getShiftTimes(shifts[0]);
             let secondShift = this.getShiftTimes(shifts[1]);
             if (secondShift.starttime.diff(firstShift.endtime) < 0) {
@@ -166,159 +187,72 @@ let Validator = {
     }
 }
 
-function Shift(date, shift) {
+function Shift(date, shift = '') {
     if (!new.target) {
         return new Shift(date, shift);
     }
 
-    let _date = date; //Should be private with a public getting and setter
-    let _startTime = null; //Should be private with a public getting and setter
-    let _endTime = null; //Should be private with a public getting and setter
-    let _location = '';
-    let _position = ''; //Should be private with a public getting and setter
-    let _qualifier = ''; //Should be private with a public getting and setter
-    let _comment = ''; //Should be private with a public getting and setter
+    let _date = date; 
+    this.shift = shift;
+    this.starttime = null; 
+    this.endtime = null; 
+    this.location = '';
+    this.position = ''; 
+    this.qualifier = ''; 
+    this.comment = ''; 
 
-    Object.defineProperty(this, 'startTime', {
-        get: function() {
-            return _startTime;
-        }
-    })
-
-    Object.defineProperty(this, 'endTime', {
-        get: function() {
-            return _endTime;
-        }
-    })
-
-    Object.defineProperty(this, 'location', {
-        get: function() {
-            return _location;
-        },
-        set: function(value) {
-            _location = value;
-        }
-    })
-
-    Object.defineProperty(this, 'position', {
-        get: function() {
-            return _position;
-        },
-        set: function(value) {
-            _position = value;
-        }
-    })
-
-    Object.defineProperty(this, 'qualifier', {
-        get: function() {
-            return _qualifier;
-        },
-        set: function(value) {
-            _qualifier = value;
-        }
-    })
-
-    Object.defineProperty(this, 'comment', {
-        get: function() {
-            return _comment;
-        }
-    })
-
-    let parse = function() {
-        if (Validator.validShift(shift)) {
-            let times = Validator.getTime(shift);
-            _startTime = new moment(`${_date.format('YYYY-MM-DD')} ${times.start}`, 'YYYY-MM-DD hh:mm a');
-            _endTime = new moment(`${_date.format('YYYY-MM-DD')} ${times.end}`, 'YYYY-MM-DD hh:mm a');
-            if (_endTime.diff(_startTime) < 0) {
-                _endTime.add(1, 'days');
+    this.parse = function() {
+        if (Validator.validShift(this.shift)) {
+            let times = Validator.getTime(this.shift);
+            this.starttime = new moment(`${_date.format('YYYY-MM-DD')} ${times.start}`, 'YYYY-MM-DD hh:mm a');
+            this.endtime = new moment(`${_date.format('YYYY-MM-DD')} ${times.end}`, 'YYYY-MM-DD hh:mm a');
+            if (this.endtime.diff(this.starttime) < 0) {
+                this.endtime.add(1, 'days');
             }
-            _location = Validator.getLocation(shift);
-            let result = Validator.getPosition(shift);
-            _qualifier = result.qualifier;
-            _position = result.position;
-            _comment = Validator.getComment(shift);
-            _isValid = true;
+            this.location = Validator.getLocation(this.shift);
+            let result = Validator.getPosition(this.shift);
+            this.qualifier = result.qualifier;
+            this.position = result.position;
+            this.comment = Validator.getComment(this.shift);
         }
     }
 
-    // let properTime = function (value) {
-    //     //input must be minimally \da or \dp
-    //     let regex = new RegExp(patterns.time, 'i'),
-    //         result = regex.exec(value),
-    //         hours = result[1].startsWith('0') ? result[1].replace('0', '') : result[1],
-    //         minutes = typeof(result[4]) === "undefined" ? "00" : result[4],
-    //         period = result[5].length === 1 ? result[5] + "m" : result[5];
-    //     return (hours + ':' + minutes + period);
-    // }
-            
-    // let getTime = function (value) {
-    //     let regex = new RegExp(patterns.times, 'i');
-    //     let result = regex.exec(value);
-    //     return { start: properTime(result[1]), end: properTime(result[3]) };
-    // }
-
-    // let getLocation = function(value) {
-    //     let regex = new RegExp(patterns.location, 'i');
-    //     let result = regex.exec(value);
-    //     if (result) {
-    //         return result[1];
-    //     } else {
-    //         return '';
-    //     }
-    // }
-
-    // let getPosition = function(value) {
-    //     let regex = new RegExp(patterns.position, 'i');
-    //     let result = regex.exec(value);
-    //     if (result) {
-    //         return { qualifier:result[2], position:result[3] }
-    //     } else {
-    //         return { qualifier:'', position:'' }
-    //     }
-    // }
-
-    // let getComment = function(value) {
-    //     let regex = new RegExp(patterns.comment, 'i');
-    //     let result = regex.exec(value);
-    //     if (result) {
-    //         return result[1];
-    //     } else {
-    //         return ''
-    //     }
-    // }
-
     this.hours = function(){
-        let minutes = _endTime.diff(_startTime, 'minutes');
-        if (minutes > 240) {
-            minutes -= 30;
+        if (this.starttime && this.endtime) {
+            let minutes = this.endtime.diff(this.starttime, 'minutes');
+            if (minutes > 240) {
+                minutes -= 30;
+            }
+            return minutes/60;
         }
-        return minutes/60;
+        return 0;
     } 
 
     this.format = function(format, options = {}) {
-        let retval = `${_startTime.format('h:mm a')} - ${_endTime.format('h:mm a')}`;
-        if (format === 'short'){
-            retval = retval.replace(/(:00)/g, '').replace(/\s/g, '');
-        } else if (format == 'extrashort') {
-            retval = retval.replace(/(:00)/g, '').replace(/\s/g, '').replace(/M/gi, '');
-        }
-        if (_location && options.showlocation) {
-            retval += ` @${_location}`;
-        }
-        if (_qualifier && options.showqualifier) {
-            retval += ` #${_qualifier}`
-        }
-        if (_position && options.showposition) {
-            retval += ` ${_position}`
-        }
-        if (_comment) {
-            retval += ` **${_comment}`
-        }
+        if (this.starttime && this.endtime) {
+            let retval = `${this.starttime.format('h:mm a')} - ${this.endtime.format('h:mm a')}`;
+            if (format === 'short'){
+                retval = retval.replace(/(:00)/g, '').replace(/\s/g, '');
+            } else if (format == 'extrashort') {
+                retval = retval.replace(/(:00)/g, '').replace(/\s/g, '').replace(/M/gi, '');
+            }
+            if (this.location && options.showlocation) {
+                retval += ` @${this.location}`;
+            }
+            if (this.qualifier && options.showqualifier) {
+                retval += ` #${this.qualifier}`
+            }
+            if (this.position && (options.showposition || options.showqualifier)) {
+                retval += ` ${this.position}`
+            }
+            if (this.comment) {
+                retval += ` **${this.comment}`
+            }
 
-        return retval.toUpperCase();
+            return retval.toUpperCase();
+        }
+        return '';
     }
-
-    parse();
 }
 
 function Schedule(date) {
@@ -327,75 +261,76 @@ function Schedule(date) {
     };
 
     this.date = date;
-    let _shiftstring = '';
+    this.shiftstring = '';
     this.defaultLocation = '';
     this.defaultQualifier = '';
     this.defaultPosition = '';
     this.firstShift = null;
     this.secondShift = null;
 
-    Object.defineProperty(this, 'shiftstring', {
-        get: function() {
-            return _shiftstring;
-        },
-        set: function(value) {
-            _shiftstring = value;
-            if (Validator.isTimes(_shiftstring)) {
-                let parts = _shiftstring.split('/');
-                this.firstShift = new Shift(this.date, parts[0]);
-                if (parts.length === 2) {
-                    this.secondShift = new Shift(this.date, parts[1]);
-                    if (this.secondShift.location) {
-                        if (!this.firstShift.location) {
-                            this.firstShift.location = this.secondShift.location;
-                        }
-                    } else {
-                        this.secondShift.location = this.defaultLocation;
-                        if (!this.firstShift.location) {
-                            this.firstShift.location = this.secondShift.location;
-                        }
+    this.setShifts = function() {
+        if (Validator.isTimes(this.shiftstring)) {
+            let parts = this.shiftstring.split('/');
+            this.firstShift = new Shift(this.date, parts[0]);
+            this.firstShift.parse();
+            if (parts.length === 2) {
+                this.secondShift = new Shift(this.date, parts[1]);
+                this.secondShift.parse();
+                if (this.secondShift.location) {
+                    if (!this.firstShift.location) {
+                        this.firstShift.location = this.secondShift.location;
                     }
-                    if (this.secondShift.qualifier) {
-                        if (!this.firstShift.qualifier) {
-                            this.firstShift.qualifier = this.secondShift.qualifier;
-                        }
-                    } else {
-                        this.secondShift.qualifier = this.defaultQualifier;
-                        if (!this.firstShift.qualifier) {
-                            this.firstShift.qualifier = this.secondShift.qualifier;
-                        }
+                } else {
+                    this.secondShift.location = this.defaultLocation;
+                    if (!this.firstShift.location) {
+                        this.firstShift.location = this.secondShift.location;
                     }
-                    if (this.secondShift.position) {
-                        if (!this.firstShift.position) {
-                            this.firstShift.position = this.secondShift.position;
-                        }
-                    } else {
-                        this.secondShift.position = this.defaultPosition;
-                        if (!this.firstShift.position) {
-                            this.firstShift.position = this.secondShift.position;
-                        }
+                }
+                if (this.secondShift.qualifier) {
+                    if (!this.firstShift.qualifier) {
+                        this.firstShift.qualifier = this.secondShift.qualifier;
+                    }
+                } else {
+                    this.secondShift.qualifier = this.defaultQualifier;
+                    if (!this.firstShift.qualifier) {
+                        this.firstShift.qualifier = this.secondShift.qualifier;
+                    }
+                }
+                if (this.secondShift.position) {
+                    if (!this.firstShift.position) {
+                        this.firstShift.position = this.secondShift.position;
+                    }
+                } else {
+                    this.secondShift.position = this.defaultPosition;
+                    if (!this.firstShift.position) {
+                        this.firstShift.position = this.secondShift.position;
                     }
                 }
             }
         }
-    })
+    }
 
-    Object.defineProperty(this, 'isExcuse', {
-        get: function() {
-            return Validator.isExcuse(_shiftstring);
-        }
-    })
+    this.isExcuse = function() {
+        return Validator.isExcuse(this.shiftstring);
+    }
 
-    Object.defineProperty(this, 'isTime', {
-        get: function() {
-            return Validator.isTimes(_shiftstring);
+    this.isTime = function() {
+        return Validator.isTimes(this.shiftstring);
+    }
+
+    this.isSplit = function() {
+        if (this.secondShift) {
+            return true;
         }
-    })
+        return false;
+    }
 
     this.format = function(format) { 
-        let retval = _shiftstring;
-        if (Validator.isTimes(_shiftstring)){
-            retval = '';
+        let retval = this.shiftstring;
+        if (Validator.isTimes(this.shiftstring) || this.firstShift){
+            if (!this.firstShift) {
+                this.setShifts();
+            }
             let firstShift_options = {};
             if (this.secondShift) {
                 let secondShift_options = {};
@@ -417,7 +352,7 @@ function Schedule(date) {
                 }
                 if (this.secondShift.qualifier === this.firstShift.qualifier) {
                     firstShift_options.showqualifier = false;
-                    if (this.secondShift.qualifier === this.defaultQualifer) {
+                    if (this.secondShift.qualifier === this.defaultQualifier) {
                         secondShift_options.showqualifier = false;
                     }
                     else {
@@ -461,21 +396,13 @@ function Schedule(date) {
                 retval = this.firstShift.format(format, firstShift_options);
             }
         }
-        return retval.toUpperCase();
+        //return retval.toUpperCase();
+        this.shiftstring = retval.toUpperCase();
     }
 
     this.hours = function() {
         var retval = 0;
-        // if (_shiftstring) {
-        //     let parts = _shiftstring.split('/')
-        //     for(part of parts) {
-        //         if (Validator.isTimes(part)) {
-        //             let shift = new Shift(this.date, part)
-        //             retval += shift.hours();
-        //         }
-        //     }
-        // }
-        if (Validator.isTimes(_shiftstring)){
+        if (Validator.isTimes(this.shiftstring)){
             retval += this.firstShift.hours();
             if (this.secondShift) {
                 retval += this.secondShift.hours();
@@ -485,11 +412,11 @@ function Schedule(date) {
     }
 
     this.isValid = function() {
-        return this.isEmpty() || Validator.validShifts(_shiftstring);
+        return this.isEmpty() || Validator.validShifts(this.shiftstring);
     }
 
     this.isEmpty = function() {
-        if (_shiftstring) {
+        if (this.shiftstring) {
             return false;
         }
         return true;
@@ -502,14 +429,15 @@ let rostershift = {
                 spellcheck="false"
                 class="shift-input"  
                 :class="{missing :isEmpty, invalid :!isValid}"
-                v-model.lazy="shiftstring"
+                v-model.lazy="schedule.shiftstring"
                 v-on:focusin="$emit('focusin')" 
                 v-on:focusout="$emit('focusout')"   
                 v-on:change="valueChanged()"
-                v-on:keyup.enter="valueChanged()"/>`, 
+                v-on:keyup.enter="valueChanged()"
+                v-on:dblclick="emitEnterShift(schedule)"/>`, 
     data: function() {
         return {
-            shiftstring: this.schedule.shiftstring,
+            //shiftstring: this.schedule.shiftstring,
             shortcuts: {
                 o: 'OFF',
                 or: 'OFF (R)',
@@ -520,29 +448,32 @@ let rostershift = {
     },
     computed: {
         isEmpty: function() {
-            if (this.shiftstring) {
+            if (this.schedule.shiftstring) {
                 return false;
             }
             return true;
         },
         isValid: function() {
-            return this.isEmpty || Validator.validShifts(this.shiftstring);
+            return this.isEmpty || Validator.validShifts(this.schedule.shiftstring);
         }
     },
     methods: {
         valueChanged: function() {
             for(let key in this.shortcuts){
-                if (this.shiftstring === key) {
-                    this.shiftstring = this.shortcuts[key];
+                if (this.schedule.shiftstring === key) {
+                    this.schedule.shiftstring = this.shortcuts[key];
                     break;
                 }
             }
             if (this.isValid){
-                this.schedule.shiftstring = this.shiftstring;
-                this.shiftstring = this.schedule.format("short");
+                this.schedule.setShifts();
+                this.schedule.format("short");
             }
             this.$emit('cellchanged');
         },
+        emitEnterShift: function(schedule) {
+            this.$emit('enter-shifts', schedule);
+        }
     }
 }
 
@@ -555,7 +486,8 @@ let rostershiftcell = {
                         :schedule="schedule"
                         v-on:focusin="isActive = true" 
                         v-on:focusout="isActive = false"
-                        v-on:cellchanged="$emit('update-hours')">
+                        v-on:cellchanged="$emit('update-hours')"
+                        v-on:enter-shifts="emitEnterShift">
                     </rostershift>
                 </td>`,
     components: {
@@ -564,6 +496,11 @@ let rostershiftcell = {
     data: function() {
         return {
             isActive : false
+        }
+    },
+    methods: {
+        emitEnterShift: function(schedule) {
+            this.$emit('enter-shifts', schedule)
         }
     }
 }
@@ -642,7 +579,8 @@ let rosterslot = {
                     :key="index"
                     :data-row="employeeindex + 1"
                     :data-col="index + 1"
-                    v-on:update-hours="updatehours()">
+                    v-on:update-hours="updatehours()"
+                    v-on:enter-shifts="emitEnterShift">
                 </rostershiftcell>
                 <td class="col hours number">{{hours}}</td>
                </tr>`,
@@ -701,10 +639,16 @@ let rosterslot = {
         },
         emitDeleteEmployee: function() {
             this.$emit('delete-employee', this.employeeindex);
+        },
+        emitEnterShift: function(schedule) {
+            this.$emit('enter-shifts', { schedule: schedule, employee: this.employee })
         }
     },
     mounted() {
         this.updatehours();
+        EventBus.$on('CLOSED-SHIFTENTRYMODAL', () => {
+            this.updatehours();
+          })
     }
 }
 
@@ -734,7 +678,8 @@ let rostersection = {
                             :hasqualifier = "hasQualifier"
                             v-on:hours-updated="hoursUpdated()"
                             v-on:delete-employee="emitDeleteEmployee"
-                            v-on:select-employee="emitSelectEmployee">
+                            v-on:select-employee="emitSelectEmployee"
+                            v-on:enter-shifts="emitEnterShifts">
                         </rosterslot>
                     </tbody>
                 </table>
@@ -762,6 +707,9 @@ let rostersection = {
         },
         hoursUpdated: function() {
             this.$emit('hours-updated');
+        },
+        emitEnterShifts(data) {
+            this.$emit('enter-shifts', data);
         }
     }
 }
@@ -837,6 +785,376 @@ let selectemployee = {
      }
 }
 
+let timeentry = {
+    props: {
+        value: String,
+        start: {
+            type: String,
+            default: '12:00 am'
+        }
+    }, 
+    data: function() {
+        return { 
+                times: [],
+                selectedvalue: this.value,
+                startindex: 0
+            }
+    },
+    watch: {
+        value: function(newVal) {
+            this.selectedvalue = this.value;
+        },
+        times: function(newVal) {
+            this.startindex = this.times.indexOf(this.start);
+        },
+        start: function(newVal) {
+            this.startindex = this.times.indexOf(this.start);
+        }
+    },
+    template: `<select class="form-control" v-model="selectedvalue" v-on:change="emitTimeChanged">
+                    <option value="" disabled >Select time</option>
+                    <option v-for="(time, index) in times" :key="index" :value="time" v-if="index >= startindex">{{time}}</option>
+               </select>`,
+    methods: {
+        emitTimeChanged: function() {
+            this.$emit('time-changed', this.selectedvalue);
+        },
+        setStart: function(value) {
+            this.start = value;
+        }
+    },
+    created: function() {
+        for(let i = 0; i < 48; i++) {
+            let suffix = 'am';
+            if (i >= 24) {
+                suffix = 'pm';
+            }
+            let minutes = '00';
+            let hour = i;
+            if (i % 2 === 1) {
+                minutes = '30';
+                hour = i - 1;
+            }
+            hour = (hour / 2) % 12;
+            if (hour === 0) {
+                hour = 12
+            }
+            this.times.push(`${hour}:${minutes} ${suffix}`);
+        }
+    }
+}
+
+let shiftentry = {
+    props: ['location', 'employee', 'schedule', 'locations', 'locationsqualifiers'],
+    data: function() {
+        return {
+            showModal: 'none',
+            localSchedule: this.createSchedule(this.schedule),
+            locID: this.location.locID,
+            page: 1,
+            isSplit : false,
+            errors: {
+                starttime: false,
+                endtime: false,
+                position: false,
+                has: function() {
+                    if (this.starttime || this.endtime || this.position) {
+                        return true;
+                    }
+                    return false;
+                }
+            }
+        }
+    },
+    components: {
+        'timeentry' : timeentry
+    },
+    watch: {
+        locID: function(newVal, oldVal) {
+            this.currentShift.location = newVal;
+        },
+        isSplit: function(newVal) {
+            if (newVal) {
+                if (!this.localSchedule.secondShift) {
+                    this.localSchedule.secondShift = this.createShift();
+                }
+            } else {
+                this.localSchedule.secondShift = null;
+            }
+        }
+    },
+    computed: {
+        dateDisplay: function() {
+            return this.localSchedule.date.format('dddd MMMM DD, YYYY');
+        },
+        fullname: function() {
+            return `${this.employee.emp_fname} ${this.employee.emp_lname}`;
+        },
+        currentShift: function() {
+            let shift;
+            if (this.page === 1) {
+                if (!this.localSchedule.firstShift) {
+                    this.localSchedule.firstShift = this.createShift();
+                }
+                shift = this.localSchedule.firstShift;
+            } else {
+                if (!this.localSchedule.secondShift) {
+                    this.localSchedule.secondShift = this.createShift();
+                }
+                shift = this.localSchedule.secondShift;
+            }
+            return shift;
+        },
+        currentPosition: {
+            get: function() {
+                if (this.page === 1) {
+                    if (this.localSchedule.firstShift.position) {
+                        return this.getShiftPosition(this.localSchedule.firstShift);
+                    } else {
+                        return this.getEmployeePosition();
+                    }
+                } else {
+                    if (this.localSchedule.firstShift.position) {
+                        return this.getShiftPosition(this.localSchedule.secondShift);
+                    } else {
+                        return this.getEmployeePosition();
+                    }
+                }
+            },
+            set: function(value) {
+                //console.log(`Position changed to ${value}`);
+                let result = Validator.getPosition(value);
+                if (this.page === 1) {
+                    this.localSchedule.firstShift.qualifier = result.qualifier;
+                    this.localSchedule.firstShift.position = result.position;
+                } else {
+                    this.localSchedule.secondShift.qualifier = result.qualifier;
+                    this.localSchedule.secondShift.position = result.position;
+                }
+                this.localSchedule.format('short');
+            }
+        },
+        shiftstring: function() {
+            this.localSchedule.format('short');
+            return this.localSchedule.shiftstring;
+        },
+        isValid: function() {
+            return Validator.validShifts(this.shiftstring);
+        }
+    },
+    template: `<div id="shiftentry-dialog" class="modal fade" tabindex=-1 role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close" v-on:click="reset"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title">Enter shift for {{fullname}}<span v-if="isSplit">&nbsp;(Shift {{page}} of 2)</span></h4>
+                                <h5 class="modal-title">Date: {{dateDisplay}}</h5>
+                                <span><h5 class="haserrors" v-show="errors.has()"><strong>The fields marked with an &#10033; are required</strong></h5></span>
+                            </div>
+                            <div class="modal-body">
+                                <div v-if="(page===1 && (currentShift.starttime && currentShift.endtime)) || page===2">
+                                    <p><span>Shift string:&nbsp;</span>{{shiftstring}}</p>
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col-xs-6">
+                                        <label for="location">Location</label>
+                                        <select id="location" v-model="locID" class="form-control">
+                                            <option v-for="loc in locations" v-if="loc.type === 'R' || loc.type === 'C'" :value="loc.locID">{{loc.name}}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col-xs-4" :class="{haserrors: errors.starttime}">
+                                        <label for="starttime">Start Time<span v-show="errors.location"><strong>&nbsp;&#10033;</strong></span></label>
+                                        <timeentry ref="starttime" id="starttime" :value="gettime(currentShift.starttime)" v-on:time-changed="setStartTime"/>
+                                    </div>
+                                    <div class="col-xs-4" :class="{haserrors: errors.endtime}">
+                                        <label for="endtime">End Time<span v-show="errors.location"><strong>&nbsp;&#10033;</strong></span></label>
+                                        <timeentry ref="endtime" id="endtime" :value="gettime(currentShift.endtime)" :start="gettime(currentShift.starttime)" v-on:time-changed="setEndTime"/>
+                                    </div>
+                                    <div class="col-xs-4">
+                                        <label for="hours">Hours</label>
+                                        <p v-if="(currentShift.starttime && currentShift.endtime) || page===2">{{localSchedule.hours()}}</p>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col-xs-6">
+                                        <label for="position" :class="{haserrors: errors.position}">Position<span v-show="errors.location"><strong>&nbsp;&#10033;</strong></span></label>
+                                        <select id="position" v-model="currentPosition" class="form-control">
+                                            <option value="" disabled>Select position</option>
+                                            <option v-for="row in locationsqualifiers" v-if="row.locID===locID" :value="row.position">{{row.position}}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="comment">Comment</label>
+                                    <input type="text" id="comment" class="form-control" v-model="currentShift.comment"/>
+                                </div>
+                                <div class="form-group">
+                                    <input type="checkbox" id="issplit" v-model="isSplit">
+                                    <label for="issplit">Is split shift?</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal" v-on:click="reset">Close</button>
+                                <button type="button" class="btn btn-default" v-on:click="gotoPageOne" v-if="isSplit && page===2">&lt; 1st shift</button>
+                                <button type="button" class="btn btn-default" v-on:click="gotoPageTwo" v-if="isSplit && page===1">2nd shift &gt;</button>
+                                <button type="button" class="btn btn-primary" v-on:click="selectshiftOkClicked" :disabled="!isValid">OK</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`,
+    methods: {
+        updateData: function(data) {
+            this.localSchedule = this.createSchedule(data.schedule);
+            this.locID = this.location.locID;
+            if (this.page === 1) {
+                if (data.schedule.firstShift) {
+                    this.locID = data.schedule.firstShift.location;
+                }
+            } else {
+                if (data.schedule.secondShift) {
+                    this.locID = data.schedule.secondShift.location;
+                }
+            }
+            this.validate();
+        },
+        createSchedule: function(source) {
+            let localschedule = new Schedule(source.date);
+            localschedule.firstShift = source.firstShift;
+            localschedule.secondShift = source.secondShift;
+            this.isSplit = source.isSplit();
+            return localschedule;
+        },
+        isValidStartTime: function() {
+            let result = true;
+            if (this.currentShift.starttime) {
+                this.errors.starttime = false;
+            } else {
+                result = false;
+                this.errors.starttime = true;
+            }
+            return result;
+        },
+        isValidEndTime: function() {
+            let result = true;
+            if (this.currentShift.endtime) {
+                this.errors.endtime = false;
+            } else {
+                result = false;
+                this.errors.endtime = true;
+            }
+            return result;
+        },
+        isValidPosition: function () {
+            let result = true;
+            if (this.currentShift.position) {
+                this.errors.position = false;
+            } else {
+                result = false;
+                this.errors.position = true;
+            }
+            return result;
+        },
+        validate: function() {
+            let isValid = this.isValidStartTime();
+            isValid = this.isValidEndTime() && isValid;
+            isValid = this.isValidPosition() && isValid;
+            return isValid;
+        },
+        selectshiftOkClicked: function() {
+            if (this.validate()) {
+                hideShiftEntryModal();
+                this.localSchedule.format('short');
+                this.schedule.shiftstring = this.localSchedule.shiftstring;
+                this.schedule.setShifts();
+                this.schedule.format('short');
+                EventBus.$emit('CLOSED-SHIFTENTRYMODAL');
+                this.reset();
+            }
+        },
+        gotoPageTwo: function() {
+            //console.log('Go to page 2');
+            if (this.validate()) {
+                this.page = 2;
+                this.resetErrors();
+                this.validate();
+            }
+        },
+        gotoPageOne: function() {
+            //console.log('Go to page 1');
+            if (this.validate()) {
+                this.page = 1;
+                this.resetErrors();
+                this.validate();
+            }
+        },
+        resetErrors: function() {
+            this.errors.starttime = false;
+            this.errors.endtime = false;
+            this.errors.position = false;
+        },
+        gettime: function(moment) {
+            if (moment) {
+                return moment.format('h:mm a');
+            } else {
+                return '';
+            }
+        },
+        setStartTime: function(time) {
+            //console.log(`Start time: ${time}`);
+            this.currentShift.starttime = new moment(`${this.schedule.date.format('YYYY-MM-DD')} ${time}`, 'YYYY-MM-DD h:mm a');
+            this.isValidStartTime();
+        },
+        setEndTime: function(time) {
+            //console.log(`End time: ${time}`);
+            this.currentShift.endtime = new moment(`${this.schedule.date.format('YYYY-MM-DD')} ${time}`, 'YYYY-MM-DD h:mm a');
+            if (this.currentShift.endtime.diff(this.currentShift.starttime) < 0) {
+                this.currentShift.endtime.add(1, 'days');
+            }
+            this.isValidEndTime();
+        },
+        createShift: function() {
+            let shift = new Shift(this.schedule.date);
+            shift.location = this.location.locID;
+            shift.qualifier = this.employee.defaultQualifier;
+            shift.position = this.employee.defaultPosition;
+            return shift;
+        },
+        reset: function() {
+            //this.localSchedule = null;
+            this.page = 1;
+            this.isSplit = false;
+        },
+        hoursUpdated: function() {
+            this.$emit('hours-updated');
+        },
+        getEmployeePosition: function() {
+            let currentposition;
+            if (this.employee.defaultQualifier) {
+                currentposition = `${this.employee.defaultQualifier} ${this.employee.defaultPosition}`;
+            } else {
+                currentposition = this.employee.defaultPosition;
+            }
+            return currentposition;
+        },
+        getShiftPosition: function(shift) {
+            let currentposition;
+            if (shift.qualifier) {
+                currentposition = `${shift.qualifier} ${shift.position}`;
+            } else {
+                currentposition = shift.position;
+            }
+            return currentposition;
+        }
+    },
+    mounted () {
+        EventBus.$on('SHOW-SHIFTENTRYMODAL', (data) => {
+          this.updateData(data);
+        })
+    }
+}
+
 const app = new Vue({
     el: '#main',
     data: {
@@ -855,12 +1173,15 @@ const app = new Vue({
         agreedhours: 0,
         deletedemployees: [],
         otheremployees: [],
-        editEmployeeIndex: -1
+        editEmployeeIndex: -1,
+        editdata: null,
+        locationsqualifiers: []
         // additionalhours: 0
     },
     components: {
         'rostersection' : rostersection,
-        'selectemployee' : selectemployee
+        'selectemployee' : selectemployee,
+        'shiftentry' : shiftentry
     },
     watch: {
         locations: function() {
@@ -881,12 +1202,14 @@ const app = new Vue({
                 this.loadAllocatedHours();
                 this.loadPositions();
                 this.loadOtherEmployees();
+                this.loadLocationsQualifiers();
             }
         },
         employees: function(newval, oldval) {
             if (newval) {
-                for(employee of this.employees) {
-                    employee.schedules = this.createSchedules(employee.defaultQualifer, employee.defaultPosition);
+                for(let employee of this.employees) {
+                    //console.log(`For employee ${employee.emp_fname} ${employee.emp_lname}, defaultqualifier: ${employee.defaultQualifier}, defaultposition: ${employee.defaultPosition}`);
+                    employee.schedules = this.createSchedules(employee.defaultQualifier, employee.defaultPosition);
                 }
             }
         }
@@ -992,7 +1315,7 @@ const app = new Vue({
                 sectionDefID: section.id,
                 defaultLocation: ''
             }
-            newemployee.schedules = this.createSchedules(this.location.defaultQualifer, section.defaultPosition);
+            newemployee.schedules = this.createSchedules(this.location.defaultQualifier, section.defaultPosition);
             let addindex = this.getAddIndex(section.id);
             //this.employees.push(newemployee);
             this.employees.splice(addindex, 0, newemployee);
@@ -1056,6 +1379,16 @@ const app = new Vue({
                 }
             })
         },
+        loadLocationsQualifiers: function() {
+            let url = `getlocationsqualifiers.php?weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                if (json) {
+                    this.locationsqualifiers = json;
+                }
+            })
+        },
         extractPositions: function(positionsarray) {
             this.positions = [];
             for(let i = 0; i < positionsarray.length; i++) {
@@ -1102,6 +1435,13 @@ const app = new Vue({
             this.editEmployeeIndex = -1;
             this.updatestats();
         },
+        enterShifts: function(data) {
+            this.editdata = data;
+            this.$nextTick(function() {
+                showShiftEntryModal();
+                EventBus.$emit('SHOW-SHIFTENTRYMODAL', data);
+            });
+        },
         removeEmployee: function(list, employee) {
             let index = -1;
             for(let i = 0; i < list.length; i++) {
@@ -1125,20 +1465,20 @@ const app = new Vue({
             // names must be equal
             return 0;
         },
-        highlightCell(row, col) {
+        highlightCell: function(row, col) {
             this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
         },
-        unhighlightCell(row, col) {
+        unhighlightCell: function(row, col) {
             this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.remove('highlight');
         },
-        highlightCells(startrow, startcol, endrow, endcol){
+        highlightCells: function(startrow, startcol, endrow, endcol){
             for(let i = startrow; i <= endrow; i++){
                 for(let j = startcol; j <= endcol; j++) {
                     this.highlightCell(i, j);
                 }
             }
         },
-        unhighlightAllCells() {
+        unhighlightAllCells: function() {
             let startrow = 1;
             let endrow = this.employees.length;
             let startcol = 1;
@@ -1148,6 +1488,9 @@ const app = new Vue({
                     this.unhighlightCell(i, j);
                 }
             }
+        },
+        weekendingChanged: function() {
+            console.log('weekending changed.');
         }
     },
     created: function() {

@@ -192,3 +192,11 @@ td.position {
 #selectemployee-dialog .local {
     background-color: #D3E3F2;
 }
+
+.haserrors label {
+    color: red;
+}
+
+.haserrors select {
+    border-color: red;
+}

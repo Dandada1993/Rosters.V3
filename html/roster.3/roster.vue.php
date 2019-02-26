@@ -11,6 +11,7 @@
     <title>Roster</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/css/jquery.timepicker.min.css" />
     <link rel="stylesheet" type="text/css" href="/css/bootstrap-datepicker.min.css">
     <link rel="stylesheet" type="text/css" href="/css/roster-3.0.css">
 </head>
@@ -68,7 +69,8 @@
                 v-on:hours-updated="hoursUpdated()"
                 v-on:add-employee="addEmployee"
                 v-on:delete-employee="deleteEmployee"
-                v-on:select-employee="selectEmployee">
+                v-on:select-employee="selectEmployee"
+                v-on:enter-shifts="enterShifts">
             </div>
             <div class="rostertotals">
                 <table>
@@ -98,7 +100,7 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <label for="selectlocations-dropdown">Locations</label>
+                            <label for="selectlocations-dropdown">Location</label>
                             <select class="form-control" id="selectlocations-dropdown" v-on:change="locationChanged">
                                 <option value="" disabled selected>Select location</option>
                                 <option v-for="loc in locations" :value="loc.locID">{{loc.name}}</option>
@@ -107,7 +109,7 @@
                         <div class="form-group">
                             <label for="weekending-input">Weekending</label>
                             <div class='input-group date' id='weekending'>
-                                <input id="weekending-input" type='text' class="form-control"/>
+                                <input id="weekending-input" type='text' class="form-control" autocomplete="off"/>
                                 <span class="input-group-addon">
                                     <span class="glyphicon glyphicon-calendar">
                                     </span>
@@ -127,8 +129,17 @@
             :otheremployees="otheremployees"
             v-on:employee-selected="employeeSelected"
         ></div>
+        <div is="shiftentry" v-if="location && editdata"
+            :location="location"
+            :employee="editdata.employee"
+            :schedule="editdata.schedule"
+            :locations="locations"
+            :locationsqualifiers="locationsqualifiers"
+            v-on:hours-updated="hoursUpdated()"
+        ></div>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>
+    <script src="/js/jquery.timepicker.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/bootstrap-datepicker.min.js"></script>
     <script src="/js/moment.js"></script>
