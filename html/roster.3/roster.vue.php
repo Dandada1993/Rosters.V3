@@ -1,7 +1,8 @@
 <?php
-    require 'getlocations.php';
-
-    $locations = getlocations();
+    require 'acceptparameters.php';
+    $locID = isset($parameters["locid"]) ? $parameters["locid"] : null;
+    $weekending = isset($parameters["weekending"]) ? $parameters["weekending"] : null;
+    //$locations = getlocations();
 ?>
 <!DOCTYPE html>
 <html>
@@ -17,6 +18,10 @@
 </head>
 <body>
     <div id="main">
+        <?php
+            echo "<input type=\"text\" id=\"locID\" value=\"$locID\" style=\"display: none;\"/>";
+            echo "<input type=\"text\" id=\"weekending\" value=\"$weekending\" style=\"display: none;\"/>";
+        ?>
         <div id="top" v-if="location && weekending">
             <div>
                 <span class="left">
@@ -95,30 +100,42 @@
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <!-- <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button> -->
                         <h4 class="modal-title">Select location and week ending</h4>
+                        <h5 class="haserrors" v-show="errors.has()"><span><strong>The fields marked red are required</strong></span></h5>
                     </div>
                     <div class="modal-body">
-                        <div class="form-group">
+                        <div class="form-group" :class="{haserrors: errors.location}">
                             <label for="selectlocations-dropdown">Location</label>
-                            <select class="form-control" id="selectlocations-dropdown" v-on:change="locationChanged">
+                            <select class="form-control" id="selectlocations-dropdown" v-model="locID" v-on:change="locationChanged">
                                 <option value="" disabled selected>Select location</option>
                                 <option v-for="loc in locations" :value="loc.locID">{{loc.name}}</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="weekending-input">Weekending</label>
+                        <div class="form-group" :class="{haserrors: errors.weekending}"> 
+                            <!-- <label for="weekending-input">Weekending</label>
                             <div class='input-group date' id='weekending'>
                                 <input id="weekending-input" type='text' class="form-control" autocomplete="off"/>
                                 <span class="input-group-addon">
                                     <span class="glyphicon glyphicon-calendar">
                                     </span>
                                 </span>
+                            </div> -->
+                            <label for="weekending-input">Weekending</label>
+                            <div 
+                                is="datepicker" 
+                                id="weekending-input"
+                                input-class="form-control" 
+                                format="MM/dd/yyyy"
+                                :disabled-dates="disabledDates"
+                                v-model="weekending"
+                                v-on:closed="weekendingSelected"
+                                placeholder="Click to select weekending date">
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <!-- <button type="button" class="btn btn-default" data-dismiss="modal">Close</button> -->
                         <button id="selectlocations-button" type="button" class="btn btn-primary" v-on:click="modalOKClicked">OK</button>
                     </div>
                 </div>
@@ -139,12 +156,14 @@
         ></div>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>
-    <script src="/js/jquery.timepicker.min.js"></script>
+    <!-- <script src="/js/jquery.timepicker.min.js"></script> -->
     <script src="/js/bootstrap.min.js"></script>
-    <script src="/js/bootstrap-datepicker.min.js"></script>
+    <!-- <script src="/js/bootstrap-datepicker.min.js"></script> -->
     <script src="/js/moment.js"></script>
     <script src="/js/axios.min.js"></script>
     <script src="/js/vue.js"></script>
+    <script src="/js/vuejs-datepicker.min.js"></script>
     <script src="/js/roster-3.2-vue.js"></script>
+    
 </body>
 </html>

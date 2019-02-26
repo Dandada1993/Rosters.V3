@@ -193,10 +193,15 @@ td.position {
     background-color: #D3E3F2;
 }
 
-.haserrors label {
+.haserrors:not(.vdp-datepicker__calendar) > label,
+.haserrors:not(.vdp-datepicker__calendar) > span {
     color: red;
 }
 
-.haserrors select {
+.haserrors:not(.vdp-datepicker__calendar) > select {
+    border-color: red;
+}
+
+.haserrors .vdp-datepicker input{
     border-color: red;
 }

@@ -6,22 +6,21 @@ let data = {
 const EventBus = new Vue();
 
 $(function () {
-    $('#weekending').datepicker({
-        daysOfWeekDisabled: "0,1,3,4,5,6",
-        autoclose: true
-    });
-    $('#selectLocations-dialog').modal('show');
-    $('#selectLocations-dialog').on('shown.bs.modal', function () {
-        $('#selectlocations-dropdown').focus()
-    }); 
+    // $('#selectLocations-dialog').modal('show');
+    // $('#selectLocations-dialog').on('shown.bs.modal', function () {
+    //     $('#selectlocations-dropdown').focus()
+    // }); 
 });
+
+function showStartupModal() {
+    $('#selectLocations-dialog').modal({
+        backdrop: 'static',
+        keyboard: false
+    });
+}
 
 function hideModal() {
     $('#selectLocations-dialog').modal('hide');
-}
-
-function getWeekending() {
-    return $('#weekending-input').val();
 }
 
 function showSelectEmployeeModal() {
@@ -34,8 +33,6 @@ function hideSelectEmployeeModal() {
 
 function showShiftEntryModal() {
     $('#shiftentry-dialog').modal('show');
-    // $('#starttime').timepicker();
-    // $('#endtime').timepicker();
 }
 
 function hideShiftEntryModal() {
@@ -949,7 +946,7 @@ let shiftentry = {
                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close" v-on:click="reset"><span aria-hidden="true">&times;</span></button>
                                 <h4 class="modal-title">Enter shift for {{fullname}}<span v-if="isSplit">&nbsp;(Shift {{page}} of 2)</span></h4>
                                 <h5 class="modal-title">Date: {{dateDisplay}}</h5>
-                                <span><h5 class="haserrors" v-show="errors.has()"><strong>The fields marked with an &#10033; are required</strong></h5></span>
+                                <h5 class="haserrors" v-show="errors.has()"><span><strong>The fields marked red are required</strong></span></h5>
                             </div>
                             <div class="modal-body">
                                 <div v-if="(page===1 && (currentShift.starttime && currentShift.endtime)) || page===2">
@@ -1163,7 +1160,7 @@ const app = new Vue({
         employees: null,
         positionQualifiers: null,
         location: null,
-        locID: null,
+        locID: '',
         weekending: null,
         weekstarting: null,
         positions: [],
@@ -1175,24 +1172,50 @@ const app = new Vue({
         otheremployees: [],
         editEmployeeIndex: -1,
         editdata: null,
-        locationsqualifiers: []
+        locationsqualifiers: [],
+        disabledDates: {
+            days: [0,1,3,4,5,6]
+        },
+        errors: {
+            location: false,
+            weekending: false,
+            has: function() {
+                if (this.location || this.weekending) {
+                    return true;
+                }
+                return false;
+            }
+        }
         // additionalhours: 0
     },
     components: {
         'rostersection' : rostersection,
         'selectemployee' : selectemployee,
-        'shiftentry' : shiftentry
+        'shiftentry' : shiftentry,
+        'datepicker' : vuejsDatepicker
     },
     watch: {
         locations: function() {
-            let pattern = '';
-            for(let i = 0; i < this.locations.length; i++) {
-                if (i > 0) {
-                    pattern += '|';
-                }
-                pattern += this.locations[i].locID;
+            this.setLocationsRegExPattern();
+            let requestedLocID = this.$el.querySelector('#locID').value;
+            let requestedWeekending = this.$el.querySelector('#weekending').value;
+            if (requestedLocID) {
+                this.locID = requestedLocID;
             }
-            patterns.location = patterns.location.replace('~', pattern);
+            if (requestedWeekending) {
+                let parts = requestedWeekending.split('-');
+                let year = parseInt(parts[0]);
+                let month = parseInt(parts[1]) - 1;
+                let day = parseInt(parts[2]);
+                this.weekending = new Date(year, month, day);
+            }
+            if (this.locID && this.weekending) {
+                this.setWeekstarting();
+                this.setLocation();
+            } else {
+                this.validate();
+                showStartupModal();
+            }  
         },
         location: function(newval, oldval){
             if (newval) {
@@ -1219,10 +1242,26 @@ const app = new Vue({
             return this.agreedhours - this.totalhours;
         },
         weekendingDisplay: function() {
-            return moment(this.weekending, 'MM/DD/YYYY').format('dddd MMMM DD, YYYY');
+            let dows = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            let day = this.weekending.getDate();
+            let dow = dows[this.weekending.getDay()];
+            let month = months[this.weekending.getMonth()];
+            let year = this.weekending.getFullYear();
+            return `${dow} ${month} ${day}, ${year}`;
         }
     },
     methods: {
+        setLocationsRegExPattern: function() {
+            let pattern = '';
+            for(let i = 0; i < this.locations.length; i++) {
+                if (i > 0) {
+                    pattern += '|';
+                }
+                pattern += this.locations[i].locID;
+            }
+            patterns.location = patterns.location.replace('~', pattern);
+        },
         updatestats: function() {
             //console.log("updating stats");
             if (this.employees) {
@@ -1266,8 +1305,8 @@ const app = new Vue({
             this.updatestats();
         },
         weekDate: function(day) {  //wed: 1, tue: 7
-            let noofdays = day - 7;
-            return moment(this.weekending, 'MM/DD/YYYY').add(noofdays, 'days');
+            let noofdays = day - 7
+            return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
         },
         createSchedule: function(weekDate, defaultqualifier, defaultposition) {
             let schedule = new Schedule(weekDate);
@@ -1395,15 +1434,19 @@ const app = new Vue({
                 this.positions.push(positionsarray[i].position);
             }
         },
-        locationChanged: function(event) {
-            //console.log(event.target.value);
-            this.locID = event.target.value;
-        },
         modalOKClicked: function(event) {
-            this.weekending = getWeekending();
-            if (this.weekending) {
-                this.weekstarting = moment(this.weekending, "MM/DD/YYYY").subtract(6, 'days');
+            if (this.validate()) {
+                this.setWeekstarting();
+                this.setLocation();
+                hideModal();
             }
+        },
+        setWeekstarting: function() {
+            if (this.weekending) {
+                this.weekstarting = moment(this.formatWeekending(), "MM/DD/YYYY").subtract(6, 'days');
+            }
+        },
+        setLocation: function() {
             if (this.locID && this.weekending) {
                 for(let location of this.locations) {
                     if (location.locID === this.locID) {
@@ -1411,8 +1454,19 @@ const app = new Vue({
                         break;
                     }
                 }
-                hideModal();
             }
+        },
+        formatWeekending: function() {
+            let day = this.weekending.getDate();
+            let month = this.weekending.getMonth() + 1;
+            let year = this.weekending.getFullYear();
+            if (day < 10) {
+                day = `0${day}`;
+            }
+            if (month < 10) {
+                month = `0${month}`;
+            }
+            return `${month}/${day}/${year}`;
         },
         selectEmployee: function(index) {
             this.editEmployeeIndex = index;
@@ -1452,6 +1506,37 @@ const app = new Vue({
             }
             list.splice(index, 1);
         },
+        isValidLocation: function() {
+            let retval = true;
+            if (this.locID) {
+                this.errors.location = false;
+            } else {
+                retval = false;
+                this.errors.location = true;
+            }
+            return retval;
+        },
+        isValidWeekending: function() {
+            let retval = true;
+            if (this.weekending) {
+                this.errors.weekending = false;
+            } else {
+                retval = false;
+                this.errors.weekending = true;
+            }
+            return retval;
+        },
+        validate: function() {
+            let isvalid = this.isValidLocation();
+            isvalid = this.isValidWeekending() && isvalid;
+            return isvalid;
+        },
+        locationChanged: function() {
+            this.isValidLocation();
+        },
+        weekendingSelected: function() {
+            this.isValidWeekending();
+        },
         sortEmployees: function(empA, empB) {
             var nameA = `${empA.emp_fname} ${empA.emp_lname}`.toUpperCase(); // ignore upper and lowercase
             var nameB = `${empB.emp_fname} ${empB.emp_lname}`.toUpperCase(); // ignore upper and lowercase
@@ -1489,8 +1574,15 @@ const app = new Vue({
                 }
             }
         },
-        weekendingChanged: function() {
-            console.log('weekending changed.');
+        orderValues: function(value1, value2)
+        {
+            if (value2 < value1)
+            {
+                var temp = value1,
+                    value1 = value2,
+                    value2 = temp;
+            }
+            return { smaller:value1, larger:value2 };
         }
     },
     created: function() {
