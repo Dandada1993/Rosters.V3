@@ -564,16 +564,19 @@ let rostershift = {
             //console.log(event);
             if (event.ctrlKey) {
                 this.highlighted = true;
+            } else if (event.shiftKey) {
                 let row = this.$parent.$el.getAttribute('data-row');
                 let col = this.$parent.$el.getAttribute('data-col');
                 EventBus.$emit('CELL-HIGHLIGHT-START', { row: row, column: col});
             } else {
-                EventBus.$emit('CELL-UNHIGHLIGHTED');
+                if (event.which !== 3 || (event.which === 3 && !this.highlighted)) {
+                    EventBus.$emit('CELL-UNHIGHLIGHTED');
+                }
             }
         },
         handleMouseUp: function(event) {
-            if (event.ctrlKey) {
-                this.highlighted = true;
+            if (event.shiftKey) {
+                //this.highlighted = true;
                 let row = this.$parent.$el.getAttribute('data-row');
                 let col = this.$parent.$el.getAttribute('data-col');
                 EventBus.$emit('CELL-HIGHLIGHT-END', { row: row, column: col});
@@ -621,7 +624,7 @@ let rostershift = {
             let row = this.$parent.$el.getAttribute('data-row');
             let col = this.$parent.$el.getAttribute('data-col');
             if (row == cell.row && col == cell.column) {
-                console.log(`highlighting row: ${row}, col: ${col}`);
+                //console.log(`highlighting row: ${row}, col: ${col}`);
                 this.highlighted = true;
             }
         }
@@ -1766,7 +1769,7 @@ const app = new Vue({
                 let colRange = this.orderValues(this.highlight.start.column, this.highlight.end.column);
                 for(let i = rowRange.smaller; i <= rowRange.larger; i++) {
                     for (let j = colRange.smaller; j <= colRange.larger; j++) {
-                        console.log(`Emit for row: ${i}, column: ${j}`);
+                        //console.log(`Emit for row: ${i}, column: ${j}`);
                         EventBus.$emit('HIGHTLIGHT-CELL', {row: i, column: j});
                     }
                 }
@@ -1774,6 +1777,8 @@ const app = new Vue({
         },
         orderValues: function(value1, value2)
         {
+            value1 = parseInt(value1);
+            value2 = parseInt(value2);
             if (value2 < value1)
             {
                 var temp = value1,
@@ -1781,6 +1786,9 @@ const app = new Vue({
                     value2 = temp;
             }
             return { smaller:value1, larger:value2 };
+        },
+        save: function() {
+            console.log('Save roster');
         }
     },
     created: function() {
@@ -1793,11 +1801,11 @@ const app = new Vue({
     },
     mounted: function() {
         EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {
-            console.log(`Highlight started with row: ${cell.row}, column: ${cell.column}`);
+           //console.log(`Highlight started with row: ${cell.row}, column: ${cell.column}`);
             this.highlight.start = cell;
         });
         EventBus.$on('CELL-HIGHLIGHT-END', (cell) => {
-            console.log(`Highlight ended with row: ${cell.row}, column: ${cell.column}`);
+            //console.log(`Highlight ended with row: ${cell.row}, column: ${cell.column}`);
             this.highlight.end = cell;
             this.handleCellHighlighting();
         });
