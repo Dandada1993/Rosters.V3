@@ -1,16 +1,84 @@
 let data = {
     employees: [],
-    location: null
+    location: null,
+    clipboard : ''
 }
 
 const EventBus = new Vue();
 
-$(function () {
-    // $('#selectLocations-dialog').modal('show');
-    // $('#selectLocations-dialog').on('shown.bs.modal', function () {
-    //     $('#selectlocations-dropdown').focus()
-    // }); 
-});
+(function ($, window) {
+
+    $.fn.contextMenu = function (settings) {
+
+        return this.each(function () {
+
+            // Open context menu
+            $(this).on("contextmenu", function (e) {
+                // return native menu if pressing control
+                //if (e.ctrlKey) return;
+                
+                //open menu
+                var $menu = $(settings.menuSelector)
+                    .data("invokedOn", $(e.target))
+                    .show()
+                    .css({
+                        position: "absolute",
+                        left: getMenuPosition(e.clientX, 'width', 'scrollLeft'),
+                        top: getMenuPosition(e.clientY, 'height', 'scrollTop')
+                    })
+                    .off('click')
+                    .on('click', 'a', function (e) {
+                        $menu.hide();
+                
+                        var $invokedOn = $menu.data("invokedOn");
+                        var $selectedMenu = $(e.target);
+                        
+                        settings.menuSelected.call(this, $invokedOn, $selectedMenu);
+                    });
+                
+                return false;
+            });
+
+            //make sure menu closes on any click
+            $('body').click(function () {
+                $(settings.menuSelector).hide();
+            });
+        });
+        
+        function getMenuPosition(mouse, direction, scrollDir) {
+            var win = $(window)[direction](),
+                scroll = $(window)[scrollDir](),
+                menu = $(settings.menuSelector)[direction](),
+                position = mouse + scroll;
+                        
+            // opening menu would pass the side of the page
+            if (mouse + menu > win && menu < mouse) 
+                position -= menu;
+            
+            return position;
+        }    
+
+    };
+})(jQuery, window);
+
+// function enableContextMenu(callback) {
+//     $("td.shift:not(.header)").contextMenu({
+//         menuSelector: "#contextMenu",
+//         menuSelected: function (invokedOn, selectedMenu) {
+//             // var msg = "You selected the menu item '" + selectedMenu.text() +
+//             //     "' on the value '" + invokedOn.text() + "'";
+//             let row = invokedOn.parent().attr('data-row');
+//             let col = invokedOn.parent().attr('data-col');
+//             // console.log(`Clicked row: ${row}, col: ${col}`);
+//             // console.log(msg);
+//             callback(row, col, selectedMenu.text());
+//         }
+//     });
+// }
+
+// $(function () {
+ 
+// });
 
 function showStartupModal() {
     $('#selectLocations-dialog').modal({
@@ -303,7 +371,20 @@ function Schedule(date) {
                         this.firstShift.position = this.secondShift.position;
                     }
                 }
+            } else {
+                if (!this.firstShift.location) {
+                    this.firstShift.location = this.defaultLocation;
+                }
+                if (!this.firstShift.qualifier) {
+                    this.firstShift.qualifier = this.defaultQualifier;
+                }
+                if (!this.firstShift.position) {
+                    this.firstShift.position = this.defaultPosition;
+                }
             }
+        } else {
+            this.firstShift = null;
+            this.secondShift = null;
         }
     }
 
@@ -323,8 +404,10 @@ function Schedule(date) {
     }
 
     this.format = function(format) { 
-        let retval = this.shiftstring;
-        if (Validator.isTimes(this.shiftstring) || this.firstShift){
+        let retval = '';
+        if (Validator.isExcuse(this.shiftstring)) {
+            retval = this.shiftstring;
+        } else if (Validator.isTimes(this.shiftstring) || this.firstShift){
             if (!this.firstShift) {
                 this.setShifts();
             }
@@ -425,13 +508,15 @@ let rostershift = {
     template: `<input type="text"
                 spellcheck="false"
                 class="shift-input"  
-                :class="{missing :isEmpty, invalid :!isValid}"
+                :class="{missing :isEmpty, invalid :!isValid, highlight :highlighted}"
                 v-model.lazy="schedule.shiftstring"
                 v-on:focusin="$emit('focusin')" 
                 v-on:focusout="$emit('focusout')"   
                 v-on:change="valueChanged()"
                 v-on:keyup.enter="valueChanged()"
-                v-on:dblclick="emitEnterShift(schedule)"/>`, 
+                v-on:dblclick="emitEnterShift(schedule)"
+                v-on:mousedown="handleMouseDown"
+                v-on:mouseup="handleMouseUp"/>`, 
     data: function() {
         return {
             //shiftstring: this.schedule.shiftstring,
@@ -440,7 +525,8 @@ let rostershift = {
                 or: 'OFF (R)',
                 s: 'SL',
                 i: 'IL'
-            }
+            },
+            highlighted: false
         }
     },
     computed: {
@@ -466,24 +552,110 @@ let rostershift = {
                 this.schedule.setShifts();
                 this.schedule.format("short");
             }
+            this.emitChanged();
+        },
+        emitChanged: function() {
             this.$emit('cellchanged');
         },
         emitEnterShift: function(schedule) {
             this.$emit('enter-shifts', schedule);
+        },
+        handleMouseDown: function(event) {
+            //console.log(event);
+            if (event.ctrlKey) {
+                this.highlighted = true;
+                let row = this.$parent.$el.getAttribute('data-row');
+                let col = this.$parent.$el.getAttribute('data-col');
+                EventBus.$emit('CELL-HIGHLIGHT-START', { row: row, column: col});
+            } else {
+                EventBus.$emit('CELL-UNHIGHLIGHTED');
+            }
+        },
+        handleMouseUp: function(event) {
+            if (event.ctrlKey) {
+                this.highlighted = true;
+                let row = this.$parent.$el.getAttribute('data-row');
+                let col = this.$parent.$el.getAttribute('data-col');
+                EventBus.$emit('CELL-HIGHLIGHT-END', { row: row, column: col});
+            }
+        },
+        cut: function() {
+            data.clipboard = this.schedule.shiftstring;
+            this.schedule.shiftstring = '';
+            this.schedule.setShifts();
+        },
+        copy: function() {
+            data.clipboard = this.schedule.shiftstring;
+        },
+        paste: function() {
+            if (typeof data.clipboard === 'string') {
+                this.schedule.shiftstring = data.clipboard;
+                //data.clipboard = '';
+                this.schedule.setShifts();
+                this.schedule.format('short');
+            }
+        },
+        contextMenuClicked: function(invokedOn, selectedMenu) {
+            let action = selectedMenu.text();
+            this.performContextMenuAction(action);
+            EventBus.$emit('CONTEXTMENU-SELECTION', action);
+        },
+        performContextMenuAction: function(action) {
+            action = action.toLowerCase();
+            if (action === 'cut') {
+                this.cut();
+                this.emitChanged();
+            } else if (action === 'copy') {
+                this.copy();
+            } else if (action === 'paste') {
+                this.paste();
+                this.emitChanged();
+            } else {
+                this.schedule.shiftstring = action;
+                this.schedule.setShifts()
+                this.schedule.format('short');
+                this.emitChanged();
+            } 
+        },
+        onHighlightCell: function(cell) {
+            let row = this.$parent.$el.getAttribute('data-row');
+            let col = this.$parent.$el.getAttribute('data-col');
+            if (row == cell.row && col == cell.column) {
+                console.log(`highlighting row: ${row}, col: ${col}`);
+                this.highlighted = true;
+            }
         }
+    },
+    mounted: function() {
+        EventBus.$on('CELL-UNHIGHLIGHTED', () => {
+            this.highlighted = false;
+        });
+        $(this.$el).contextMenu({
+            menuSelector: "#contextMenu",
+            menuSelected: this.contextMenuClicked
+        });
+        EventBus.$on('CONTEXTMENU-SELECTION', (action) => {
+            if (this.highlighted) {
+                this.performContextMenuAction(action);
+            }
+        });
+        EventBus.$on('HIGHTLIGHT-CELL', (cell) => {
+            this.onHighlightCell(cell);
+        });
     }
 }
 
 let rostershiftcell = {
     props: ['schedule'],
     template: `<td 
+                ref="child"
                 class="col shift" 
                 :class="{active :isActive}" >
                     <rostershift 
                         :schedule="schedule"
                         v-on:focusin="isActive = true" 
                         v-on:focusout="isActive = false"
-                        v-on:cellchanged="$emit('update-hours')"
+                        v-on:cellchanged="emitUpdateHours"
                         v-on:enter-shifts="emitEnterShift">
                     </rostershift>
                 </td>`,
@@ -498,6 +670,9 @@ let rostershiftcell = {
     methods: {
         emitEnterShift: function(schedule) {
             this.$emit('enter-shifts', schedule)
+        },
+        emitUpdateHours: function() {
+            this.$emit('update-hours');
         }
     }
 }
@@ -1185,6 +1360,11 @@ const app = new Vue({
                 }
                 return false;
             }
+        },
+        contextMenuEnabled: false,
+        highlight: {
+            start: null,
+            end: null
         }
         // additionalhours: 0
     },
@@ -1252,6 +1432,12 @@ const app = new Vue({
         }
     },
     methods: {
+        clipboardEmpty: function() {
+            if (!data.clipboard) {
+                return true;
+            }
+            return false;
+        },
         setLocationsRegExPattern: function() {
             let pattern = '';
             for(let i = 0; i < this.locations.length; i++) {
@@ -1550,27 +1736,39 @@ const app = new Vue({
             // names must be equal
             return 0;
         },
-        highlightCell: function(row, col) {
-            this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
-        },
-        unhighlightCell: function(row, col) {
-            this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.remove('highlight');
-        },
-        highlightCells: function(startrow, startcol, endrow, endcol){
-            for(let i = startrow; i <= endrow; i++){
-                for(let j = startcol; j <= endcol; j++) {
-                    this.highlightCell(i, j);
-                }
-            }
-        },
-        unhighlightAllCells: function() {
-            let startrow = 1;
-            let endrow = this.employees.length;
-            let startcol = 1;
-            let endcol = 7;
-            for(let i = startrow; i <= endrow; i++){
-                for(let j = startcol; j <= endcol; j++) {
-                    this.unhighlightCell(i, j);
+        // highlightCell: function(row, col) {
+        //     this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
+        // },
+        // unhighlightCell: function(row, col) {
+        //     this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.remove('highlight');
+        // },
+        // highlightCells: function(startrow, startcol, endrow, endcol){
+        //     for(let i = startrow; i <= endrow; i++){
+        //         for(let j = startcol; j <= endcol; j++) {
+        //             this.highlightCell(i, j);
+        //         }
+        //     }
+        // },
+        // unhighlightAllCells: function() {
+        //     let startrow = 1;
+        //     let endrow = this.employees.length;
+        //     let startcol = 1;
+        //     let endcol = 7;
+        //     for(let i = startrow; i <= endrow; i++){
+        //         for(let j = startcol; j <= endcol; j++) {
+        //             this.unhighlightCell(i, j);
+        //         }
+        //     }
+        // },
+        handleCellHighlighting: function() {
+            if (this.highlight.start && this.highlight.end) {
+                let rowRange = this.orderValues(this.highlight.start.row, this.highlight.end.row);
+                let colRange = this.orderValues(this.highlight.start.column, this.highlight.end.column);
+                for(let i = rowRange.smaller; i <= rowRange.larger; i++) {
+                    for (let j = colRange.smaller; j <= colRange.larger; j++) {
+                        console.log(`Emit for row: ${i}, column: ${j}`);
+                        EventBus.$emit('HIGHTLIGHT-CELL', {row: i, column: j});
+                    }
                 }
             }
         },
@@ -1591,7 +1789,22 @@ const app = new Vue({
         .then(response => response.json())
         .then(json => {
             this.locations = json;
-        })
+        });
+    },
+    mounted: function() {
+        EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {
+            console.log(`Highlight started with row: ${cell.row}, column: ${cell.column}`);
+            this.highlight.start = cell;
+        });
+        EventBus.$on('CELL-HIGHLIGHT-END', (cell) => {
+            console.log(`Highlight ended with row: ${cell.row}, column: ${cell.column}`);
+            this.highlight.end = cell;
+            this.handleCellHighlighting();
+        });
+        EventBus.$on('CELL-UNHIGHLIGHTED', () => {
+            this.highlight.start = null;
+            this.highlight.end = null;
+        });
     }
     // updated: function(){
     //     this.$nextTick(function() {

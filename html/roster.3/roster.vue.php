@@ -2,7 +2,6 @@
     require 'acceptparameters.php';
     $locID = isset($parameters["locid"]) ? $parameters["locid"] : null;
     $weekending = isset($parameters["weekending"]) ? $parameters["weekending"] : null;
-    //$locations = getlocations();
 ?>
 <!DOCTYPE html>
 <html>
@@ -28,8 +27,6 @@
                     <h2>{{location.name}} (week ending: {{weekendingDisplay}})</h2>
                 </span>
                 <span class="right">
-                    <!-- <div><h4 class="stats title">Missing cells:</h4><h4 class="stats data" v-on:update-hours="updatestats()">{{nomissingcells}}</h4></div>
-                    <div><h4 class="stats title">Invalid cells:</h4><h4 class="stats data" v-on:update-hours="updatestats()">{{noinvalidcells}}</h4></div> -->
                     <table class="stats">
                         <tbody>
                             <tr>
@@ -96,11 +93,10 @@
                 </table>
             </div>
         </div>
-        <div id="selectLocations-dialog" class="modal fade" tabindex=-1 role="dialog">
+        <div ref="selectLocations-dialog" id="selectLocations-dialog" class="modal fade" tabindex=-1 role="dialog">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <!-- <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button> -->
                         <h4 class="modal-title">Select location and week ending</h4>
                         <h5 class="haserrors" v-show="errors.has()"><span><strong>The fields marked red are required</strong></span></h5>
                     </div>
@@ -113,14 +109,6 @@
                             </select>
                         </div>
                         <div class="form-group" :class="{haserrors: errors.weekending}"> 
-                            <!-- <label for="weekending-input">Weekending</label>
-                            <div class='input-group date' id='weekending'>
-                                <input id="weekending-input" type='text' class="form-control" autocomplete="off"/>
-                                <span class="input-group-addon">
-                                    <span class="glyphicon glyphicon-calendar">
-                                    </span>
-                                </span>
-                            </div> -->
                             <label for="weekending-input">Weekending</label>
                             <div 
                                 is="datepicker" 
@@ -135,7 +123,6 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <!-- <button type="button" class="btn btn-default" data-dismiss="modal">Close</button> -->
                         <button id="selectlocations-button" type="button" class="btn btn-primary" v-on:click="modalOKClicked">OK</button>
                     </div>
                 </div>
@@ -154,11 +141,21 @@
             :locationsqualifiers="locationsqualifiers"
             v-on:hours-updated="hoursUpdated()"
         ></div>
+        <ul ref="contextMenu" id="contextMenu" class="dropdown-menu" role="menu" style="display:none" >
+            <li><a tabindex="-1" href="#">Cut</a></li>
+            <li><a tabindex="-1" href="#">Copy</a></li>
+            <li :class="{'contextmenu-disabled' : clipboardEmpty()}"><a tabindex="-1" href="#" >Paste</a></li>
+            <li class="divider"></li>
+            <li class="dropdown-header">EXCUSE CODES</li>
+            <li><a tabindex="-1" href="#">OFF</a></li>
+            <li><a tabindex="-1" href="#">OFF(R)</a></li>
+            <li><a tabindex="-1" href="#">SL</a></li>
+            <li><a tabindex="-1" href="#">IL</a></li>
+            <li><a tabindex="-1" href="#">VAC</a></li>
+        </ul>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>
-    <!-- <script src="/js/jquery.timepicker.min.js"></script> -->
     <script src="/js/bootstrap.min.js"></script>
-    <!-- <script src="/js/bootstrap-datepicker.min.js"></script> -->
     <script src="/js/moment.js"></script>
     <script src="/js/axios.min.js"></script>
     <script src="/js/vue.js"></script>

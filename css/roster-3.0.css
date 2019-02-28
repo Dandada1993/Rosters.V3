@@ -205,3 +205,8 @@ td.position {
 .haserrors .vdp-datepicker input{
     border-color: red;
 }
+
+.contextmenu-disabled {
+    pointer-events:none; 
+    opacity:0.6;         
+}

@@ -1,0 +1,24 @@
+Implement context sensitive menu
+	Cut
+	Copy
+	Paste
+	Add excuse codes
+	
+Ability to highlight multiple cells
+
+Save roster to database
+
+Retrieve roster from database
+
+Ability to mark Bank Holidays
+
+Modify shift dialog so that available hours are linked to the opening hours of the restaurant
+
+Load excuse code dynamically
+	change context menu to use dynamically loaded excuse codes
+	change excuse code regex to use dynamically loaded excuse codes
+
+Issues:
+=======
+When shift cut and pasted the location and default position are not showing in the shift dialog.
+
