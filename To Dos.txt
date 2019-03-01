@@ -1,14 +1,19 @@
-Implement context sensitive menu
+Implement context sensitive menu (single cell pasted only)
 	Cut
 	Copy
 	Paste
 	Add excuse codes
 	
-Ability to highlight multiple cells
+Ability to highlight multiple cells (completed)
 
 Save roster to database
+	Save roster to roster.Rosters. Retrieve ID
+	For each employee save to roster.RosterEmps -- how to handle situation where employee already exists
+		For each shift save to roster.RosterEmpsShifts -- how to handle situation where shift already exists
 
 Retrieve roster from database
+
+Need to save roster every x minutes
 
 Ability to mark Bank Holidays
 
@@ -17,10 +22,16 @@ Modify shift dialog so that available hours are linked to the opening hours of t
 Load excuse code dynamically
 	change context menu to use dynamically loaded excuse codes
 	change excuse code regex to use dynamically loaded excuse codes
-	
-Implement multicell copy and paste
+
+Implement multicell cut, copy and paste
+
+Implement Tooltip for cells when text is too long and for cells with errors.
+
+Add class 'invalid' shifts shorter than x hours and longer than y hours. Have x and y configurable by location.
 
 Issues:
 =======
 When shift cut and pasted the location and default position are not showing in the shift dialog (fixed)
+
+Need to add position to list of employees
 

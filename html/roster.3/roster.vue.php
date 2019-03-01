@@ -16,6 +16,7 @@
     <link rel="stylesheet" type="text/css" href="/css/roster-3.0.css">
 </head>
 <body>
+    <textarea id="pastetext" style="display: none;" ></textarea>
     <div id="main">
         <?php
             echo "<input type=\"text\" id=\"locID\" value=\"$locID\" style=\"display: none;\"/>";
@@ -34,6 +35,16 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="#" v-on:click="save">Save</a></li>
+                                <li><a href="#">Change End Date</a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Help
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Documentation</a></li>
+                                <li><a href="#">Tips and Tricks</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -100,11 +111,11 @@
                             <td class="title">Total hours</td>
                             <td class="data number">{{totalhours}}</td>
                         </tr>
-                        <tr class="rosterrow">
+                        <tr class="rosterrow" v-if="agreedhours > 0">
                             <td class="title">Agreed to hours</td>
                             <td class="data number">{{agreedhours}}</td>
                         </tr>
-                        <tr class="rosterrow">
+                        <tr class="rosterrow" v-if="agreedhours > 0">
                             <td class="title">Difference</td>
                             <td class="data number">{{difference}}</td>
                         </tr>

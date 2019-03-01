@@ -583,20 +583,21 @@ let rostershift = {
             }
         },
         cut: function() {
-            data.clipboard = this.schedule.shiftstring;
-            this.schedule.shiftstring = '';
-            this.schedule.setShifts();
+            let copyText = this.$el; 
+            copyText.select();
+            document.execCommand("cut");
         },
         copy: function() {
-            data.clipboard = this.schedule.shiftstring;
+            let copyText = this.$el; 
+            copyText.select();
+            document.execCommand("copy");
         },
         paste: function() {
-            if (typeof data.clipboard === 'string') {
-                this.schedule.shiftstring = data.clipboard;
-                //data.clipboard = '';
-                this.schedule.setShifts();
-                this.schedule.format('short');
-            }
+            navigator.clipboard.readText().then(clipText =>
+            {
+                this.schedule.shiftstring = clipText;
+                this.valueChanged();
+            });
         },
         contextMenuClicked: function(invokedOn, selectedMenu) {
             let action = selectedMenu.text();
@@ -937,7 +938,7 @@ let selectemployee = {
             return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no})`;
         },
         fullnamenumberandposition: function(employee) {
-            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no}) (${employee.position})`;
+            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no}) (${employee.defaultPosition})`;
         },
         matchesSearch: function(employee) {
             let fullname = this.fullname(employee);
@@ -1333,6 +1334,7 @@ let shiftentry = {
 const app = new Vue({
     el: '#main',
     data: {
+        roster: null,
         locations: null,
         sections : null,
         employees: null,
@@ -1403,6 +1405,7 @@ const app = new Vue({
         location: function(newval, oldval){
             if (newval) {
                 this.loadPositionQualifiers();
+                this.loadRoster();
                 this.loadEmployees();
                 this.loadSections();
                 this.loadAllocatedHours();
@@ -1436,9 +1439,9 @@ const app = new Vue({
     },
     methods: {
         clipboardEmpty: function() {
-            if (!data.clipboard) {
-                return true;
-            }
+            // if (!data.clipboard) {
+            //     return true;
+            // }
             return false;
         },
         setLocationsRegExPattern: function() {
@@ -1556,6 +1559,14 @@ const app = new Vue({
                 }
             }
             return qualifiers;
+        },
+        loadRoster: function() {
+            let url = `getroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(json => {
+                this.roster = json;
+            })
         },
         loadSections: function() {
             let url = `getsections.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
@@ -1739,30 +1750,6 @@ const app = new Vue({
             // names must be equal
             return 0;
         },
-        // highlightCell: function(row, col) {
-        //     this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.add('highlight');
-        // },
-        // unhighlightCell: function(row, col) {
-        //     this.$el.querySelector(`.shift[data-row="${row}"][data-col="${col}"] input`).classList.remove('highlight');
-        // },
-        // highlightCells: function(startrow, startcol, endrow, endcol){
-        //     for(let i = startrow; i <= endrow; i++){
-        //         for(let j = startcol; j <= endcol; j++) {
-        //             this.highlightCell(i, j);
-        //         }
-        //     }
-        // },
-        // unhighlightAllCells: function() {
-        //     let startrow = 1;
-        //     let endrow = this.employees.length;
-        //     let startcol = 1;
-        //     let endcol = 7;
-        //     for(let i = startrow; i <= endrow; i++){
-        //         for(let j = startcol; j <= endcol; j++) {
-        //             this.unhighlightCell(i, j);
-        //         }
-        //     }
-        // },
         handleCellHighlighting: function() {
             if (this.highlight.start && this.highlight.end) {
                 let rowRange = this.orderValues(this.highlight.start.row, this.highlight.end.row);
