@@ -509,14 +509,18 @@ let rostershift = {
                 spellcheck="false"
                 class="shift-input"  
                 :class="{missing :isEmpty, invalid :!isValid, highlight :highlighted}"
-                v-model.lazy="schedule.shiftstring"
+                v-model="schedule.shiftstring"
                 v-on:focusin="$emit('focusin')" 
                 v-on:focusout="$emit('focusout')"   
                 v-on:change="valueChanged()"
                 v-on:keyup.enter="valueChanged()"
                 v-on:dblclick="emitEnterShift(schedule)"
                 v-on:mousedown="handleMouseDown"
-                v-on:mouseup="handleMouseUp"/>`, 
+                v-on:mouseup="handleMouseUp"
+                v-on:keyup.arrow-right="handleArrowRight"
+                v-on:keyup.arrow-left="handleArrowLeft"
+                v-on:keyup.arrow-down="handleArrowDown"
+                v-on:keyup.arrow-up="handleArrowUp"/>`, 
     data: function() {
         return {
             //shiftstring: this.schedule.shiftstring,
@@ -538,6 +542,12 @@ let rostershift = {
         },
         isValid: function() {
             return this.isEmpty || Validator.validShifts(this.schedule.shiftstring);
+        },
+        row: function() {
+            return parseInt(this.$parent.$el.getAttribute('data-row'));
+        },
+        col: function() {
+            return parseInt(this.$parent.$el.getAttribute('data-col'));
         }
     },
     methods: {
@@ -552,6 +562,7 @@ let rostershift = {
                 this.schedule.setShifts();
                 this.schedule.format("short");
             }
+            this.schedule.isDirty = true;
             this.emitChanged();
         },
         emitChanged: function() {
@@ -565,9 +576,9 @@ let rostershift = {
             if (event.ctrlKey) {
                 this.highlighted = true;
             } else if (event.shiftKey) {
-                let row = this.$parent.$el.getAttribute('data-row');
-                let col = this.$parent.$el.getAttribute('data-col');
-                EventBus.$emit('CELL-HIGHLIGHT-START', { row: row, column: col});
+                // let row = this.$parent.$el.getAttribute('data-row');
+                // let col = this.$parent.$el.getAttribute('data-col');
+                EventBus.$emit('CELL-HIGHLIGHT-START', { row: this.row, column: this.col});
             } else {
                 if (event.which !== 3 || (event.which === 3 && !this.highlighted)) {
                     EventBus.$emit('CELL-UNHIGHLIGHTED');
@@ -577,10 +588,26 @@ let rostershift = {
         handleMouseUp: function(event) {
             if (event.shiftKey) {
                 //this.highlighted = true;
-                let row = this.$parent.$el.getAttribute('data-row');
-                let col = this.$parent.$el.getAttribute('data-col');
-                EventBus.$emit('CELL-HIGHLIGHT-END', { row: row, column: col});
+                // let row = this.$parent.$el.getAttribute('data-row');
+                // let col = this.$parent.$el.getAttribute('data-col');
+                EventBus.$emit('CELL-HIGHLIGHT-END', { row: this.row, column: this.col});
             }
+        },
+        handleArrowRight: function(event) {
+            //console.log('Arrow right pressed');
+            EventBus.$emit('ARROW-RIGHT', {row: this.row, column: this.col});
+        },
+        handleArrowLeft: function(event) {
+            //console.log('Arrow right pressed');
+            EventBus.$emit('ARROW-LEFT', {row: this.row, column: this.col});
+        },
+        handleArrowDown: function(event) {
+            //console.log('Arrow right pressed');
+            EventBus.$emit('ARROW-DOWN', {row: this.row, column: this.col});
+        },
+        handleArrowUp: function(event) {
+            //console.log('Arrow right pressed');
+            EventBus.$emit('ARROW-UP', {row: this.row, column: this.col});
         },
         cut: function() {
             let copyText = this.$el; 
@@ -622,11 +649,16 @@ let rostershift = {
             } 
         },
         onHighlightCell: function(cell) {
-            let row = this.$parent.$el.getAttribute('data-row');
-            let col = this.$parent.$el.getAttribute('data-col');
-            if (row == cell.row && col == cell.column) {
+            //let row = this.$parent.$el.getAttribute('data-row');
+            //let col = this.$parent.$el.getAttribute('data-col');
+            if (row === cell.row && col === cell.column) {
                 //console.log(`highlighting row: ${row}, col: ${col}`);
                 this.highlighted = true;
+            }
+        },
+        onTakeFocus: function(cell) {
+            if (cell.row === this.row && cell.column === this.col) {
+                this.$el.focus();
             }
         }
     },
@@ -646,6 +678,9 @@ let rostershift = {
         EventBus.$on('HIGHTLIGHT-CELL', (cell) => {
             this.onHighlightCell(cell);
         });
+        EventBus.$on('TAKE-FOCUS', (cell) => {
+            this.onTakeFocus(cell);
+        })
     }
 }
 
@@ -846,7 +881,7 @@ let rostersection = {
                         <rosterslot 
                             class="rosterrow" 
                             v-for="(employee, index) in employees"
-                            v-if="employee.sectionDefID === section.id" 
+                            v-if="employee.sectionsDefID === section.id" 
                             :employee="employee" 
                             :key="index"
                             :employeeindex="index"
@@ -1338,6 +1373,7 @@ const app = new Vue({
         locations: null,
         sections : null,
         employees: null,
+        savedschedules: null,
         positionQualifiers: null,
         location: null,
         locID: '',
@@ -1349,6 +1385,7 @@ const app = new Vue({
         totalhours: 0,
         agreedhours: 0,
         deletedemployees: [],
+        deletedEmployeeIDs: [],
         otheremployees: [],
         editEmployeeIndex: -1,
         editdata: null,
@@ -1407,6 +1444,7 @@ const app = new Vue({
                 this.loadPositionQualifiers();
                 this.loadRoster();
                 this.loadEmployees();
+                this.loadRosterSchedules();
                 this.loadSections();
                 this.loadAllocatedHours();
                 this.loadPositions();
@@ -1418,7 +1456,7 @@ const app = new Vue({
             if (newval) {
                 for(let employee of this.employees) {
                     //console.log(`For employee ${employee.emp_fname} ${employee.emp_lname}, defaultqualifier: ${employee.defaultQualifier}, defaultposition: ${employee.defaultPosition}`);
-                    employee.schedules = this.createSchedules(employee.defaultQualifier, employee.defaultPosition);
+                    employee.schedules = this.createSchedules(employee);
                 }
             }
         }
@@ -1483,6 +1521,9 @@ const app = new Vue({
                 }
             }
             this.employees.splice(index, 1); //remove employee
+            if (this.employees[index].id && this.employees[index].id > 0) { //Add employee ID to deletedIDs if it exists and is > 0
+                this.deletedEmployeeIDs.push(this.employees[index].id);
+            }
             this.updatestats();
         },
         hoursUpdated: function() {
@@ -1500,34 +1541,53 @@ const app = new Vue({
             let noofdays = day - 7
             return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
         },
-        createSchedule: function(weekDate, defaultqualifier, defaultposition) {
+        createSchedule: function(weekDate, employee) {
             let schedule = new Schedule(weekDate);
-            //schedule.shiftstring = '05:00 AM - 02:00 PM';
-            schedule.defaultLocation = this.location.locID;
-            schedule.defaultQualifier = defaultqualifier;
-            schedule.defaultPosition = defaultposition;
+            let shiftstring = this.findEmployeeSchedule(weekDate, employee);
+            if (shiftstring) {
+                schedule.shiftstring = shiftstring;
+                schedule.setShifts();
+                schedule.format('short');
+            } else {
+                schedule.defaultLocation = this.location.locID;
+                schedule.defaultQualifier = employee.defaultQualifier;
+                schedule.defaultPosition = employee.defaultPosition;
+            }
+            schedule.isDirty = false;
             return schedule;
         },
-        createSchedules: function(defaultqualifier, defaultposition) {
+        findEmployeeSchedule: function(weekDate, employee) {
+            let result = null;
+            for(let i = 0; i < this.savedschedules.length; i++) {
+                let row = this.savedschedules[i];
+                if (row.emp_no === employee.emp_no && row.date === weekDate.format('YYYY-MM-DD')) {
+                    result = row.shiftstring;
+                }
+
+                let match = (row.emp_no === employee.emp_no);
+            }
+            return result;
+        },
+        createSchedules: function(employee) {
             return [ 
-                this.createSchedule(this.weekDate(1), defaultqualifier, defaultposition), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
-                this.createSchedule(this.weekDate(2), defaultqualifier, defaultposition),
-                this.createSchedule(this.weekDate(3), defaultqualifier, defaultposition),
-                this.createSchedule(this.weekDate(4), defaultqualifier, defaultposition),
-                this.createSchedule(this.weekDate(5), defaultqualifier, defaultposition),
-                this.createSchedule(this.weekDate(6), defaultqualifier, defaultposition),
-                this.createSchedule(this.weekDate(7), defaultqualifier, defaultposition)
+                this.createSchedule(this.weekDate(1), employee), //new Schedule(this.employee, weekDate(1),'05:00 AM - 02:00 PM'),
+                this.createSchedule(this.weekDate(2), employee),
+                this.createSchedule(this.weekDate(3), employee),
+                this.createSchedule(this.weekDate(4), employee),
+                this.createSchedule(this.weekDate(5), employee),
+                this.createSchedule(this.weekDate(6), employee),
+                this.createSchedule(this.weekDate(7), employee)
             ]
         },
         getAddIndex: function(sectionid) {
             let addindex = this.employees.length;
             let found = false;
             for(let i = 0; i < this.employees.length; i++) {
-                if (this.employees[i].sectionDefID === sectionid) {
+                if (this.employees[i].sectionsDefID === sectionid) {
                     found = true;
                 }
                 if (found){
-                    if (this.employees[i].sectionDefID !== sectionid) {
+                    if (this.employees[i].sectionsDefID !== sectionid) {
                         addindex = i;
                         break;
                     }
@@ -1537,13 +1597,14 @@ const app = new Vue({
         },
         addEmployee: function(section) {
             let newemployee = {
+                id: 0,
                 emp_no: '',
                 emp_fname: '',
                 emp_lname: '',
                 gender: '',
                 defaultPosition: section.defaultPosition,
                 defaultQualifier: this.location.defaultQualifier,
-                sectionDefID: section.id,
+                sectionsDefID: section.id,
                 defaultLocation: ''
             }
             newemployee.schedules = this.createSchedules(this.location.defaultQualifier, section.defaultPosition);
@@ -1560,12 +1621,16 @@ const app = new Vue({
             }
             return qualifiers;
         },
-        loadRoster: function() {
+        loadRoster: function(callback) {
             let url = `getroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             fetch(url)
             .then(response => response.json())
-            .then(json => {
-                this.roster = json;
+            .then(result => {
+                if (result.length === 1)
+                this.roster = result[0];
+                if (callback) {
+                    callback();
+                }
             })
         },
         loadSections: function() {
@@ -1625,6 +1690,93 @@ const app = new Vue({
             .then(json => {
                 if (json) {
                     this.locationsqualifiers = json;
+                }
+            })
+        },
+        loadRosterSchedules: function() {
+            let url = `getrosterschedules.php?weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(results => {
+                if (results) {
+                    this.saveRosterSchedule = results;
+                }
+            })
+        },
+        saveRoster: function() {
+            let url = `saveroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(result => {
+                if (result) {
+                    this.loadRoster(this.completeRosterSave);
+                }
+            });
+        },
+        completeRosterSave: function() {
+            if (this.roster.id) {
+                //this.roster = result[0];
+                this.saveRosterEmployees();
+                this.removeDeletedRosterEmployees();
+            }
+        },
+        saveRosterEmployees: function() {
+            for(let employee of this.employees) {
+                if (!employee.id || employee.id === '0') {
+                    this.saveRosterEmployee(employee); 
+                }
+            }
+        },
+        removeDeletedRosterEmployees: function() {
+            for(let id in this.deletedEmployeeIDs) {
+                this.deleteRosterEmployee(id);
+            }
+        },
+        saveRosterEmployee: function(employee) {
+            let formData = new FormData();
+            formData.append('rostersID', this.roster.id);
+            formData.append('emp_no', employee.emp_no);
+            formData.append('defaultposition', employee.defaultPosition);
+            formData.append('defaultqualifier', employee.defaultQualifier);
+            formData.append('sectionsdefid', employee.sectionsDefID);
+            let url = 'saverosteremployee.php';
+            fetch(url, {
+                method: 'POST',
+                body: formData        //, //JSON.stringify(data),
+                // headers: {
+                //     'Content-Type': 'application/json'
+                // }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result) {
+                    if (!employee.id || employee.id === "0") {
+                        employee.id = result[0].id;
+                    }
+                    for(let schedule of employee.schedules) {
+                        if (schedule.isDirty) {
+                            this.saveRosterSchedule(employee.id, schedule);
+                        }
+                    }
+                }
+            })
+
+        },
+        deleteRosterEmployee: function(id) {
+            let url = `deleterosteremployee.php?id=${id}`;
+            fetch(url)
+            .then(reponse => response.json())
+            .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
+        },
+        saveRosterSchedule(rosterempid, schedule) {
+            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${schedule.shiftstring}`;
+            console.log(`For rosterempid: ${rosterempid}, the url is ${url}`);
+            fetch(url)
+            .then(reponse => response.json())
+            .then(id => {
+                if (id) {
+                    schedule.id = id
+                    schedule.isDirty = false;
                 }
             })
         },
@@ -1775,7 +1927,8 @@ const app = new Vue({
             return { smaller:value1, larger:value2 };
         },
         save: function() {
-            console.log('Save roster');
+            //console.log('Save roster');
+            this.saveRoster();
         }
     },
     created: function() {
@@ -1800,6 +1953,37 @@ const app = new Vue({
             this.highlight.start = null;
             this.highlight.end = null;
         });
+        EventBus.$on('ARROW-RIGHT', (cell) => {
+            let target = { row: cell.row, column: cell.column }
+            if (cell.column < 7) {
+                target.column = cell.column + 1
+            } else if (cell.column === 7) {
+                target.row = cell.row + 1;
+                target.column = 1;
+            }
+            EventBus.$emit('TAKE-FOCUS', target);
+        });
+        EventBus.$on('ARROW-LEFT', (cell) => {
+            let target = { row: cell.row, column: cell.column }
+            if (cell.column > 1) {
+                target.column = cell.column - 1
+            } else if (cell.column === 1) {
+                target.row = cell.row - 1;
+                target.column = 7;
+            }
+            EventBus.$emit('TAKE-FOCUS', target);
+        });
+        EventBus.$on('ARROW-DOWN', (cell) => {
+            let target = { row: cell.row, column: cell.column }
+            target.row = cell.row + 1;
+            EventBus.$emit('TAKE-FOCUS', target);
+        });
+        EventBus.$on('ARROW-UP', (cell) => {
+            let target = { row: cell.row, column: cell.column }
+            target.row = cell.row - 1;
+            EventBus.$emit('TAKE-FOCUS', target);
+        });
+
     }
     // updated: function(){
     //     this.$nextTick(function() {
