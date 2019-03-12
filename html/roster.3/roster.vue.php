@@ -36,6 +36,12 @@
                             <ul class="dropdown-menu">
                                 <li><a href="#" v-on:click="save">Save</a></li>
                                 <li><a href="#">Change End Date</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#">Print</a></li>
+                                <li><a href="#">Send for Approval</a></li>
+                                <li><a href="#">Approve</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#" v-on:click="exportToAcumen">Export to Acumen</a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -158,6 +164,23 @@
                 </div>
             </div>
         </div>
+        <!-- <div ref="generic-dialog" id="generic-dialog" class="modal fade" tabindex=-1 role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title"><slot name="title"></slot></h4>
+                    </div>
+                    <div class="modal-body">
+                        <slot name="body"></slot>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button id="generic-dialogOK" type="button" class="btn btn-primary" v-on:click="">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div> -->
         <div is="selectemployee"
             :deletedemployees="deletedemployees"
             :otheremployees="otheremployees"
@@ -177,11 +200,12 @@
             <li :class="{'contextmenu-disabled' : clipboardEmpty()}"><a tabindex="-1" href="#" >Paste</a></li>
             <li class="divider"></li>
             <li class="dropdown-header">EXCUSE CODES</li>
-            <li><a tabindex="-1" href="#">OFF</a></li>
+            <!-- <li><a tabindex="-1" href="#">OFF</a></li>
             <li><a tabindex="-1" href="#">OFF(R)</a></li>
             <li><a tabindex="-1" href="#">SL</a></li>
             <li><a tabindex="-1" href="#">IL</a></li>
-            <li><a tabindex="-1" href="#">VAC</a></li>
+            <li><a tabindex="-1" href="#">VAC</a></li> -->
+            <li v-for="excuse in excusecodes" v-if="excusecodes"><a tabindex="-1" href="#">{{excuse.code}}</a></li>
         </ul>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>

@@ -11,7 +11,14 @@ Save roster to database
 	For each employee save to roster.RosterEmps -- how to handle situation where employee already exists
 		For each shift save to roster.RosterEmpsShifts -- how to handle situation where shift already exists
 
-Retrieve roster from database
+Retrieve roster from database (testing)
+
+Saving to Working Schedules
+	Copy TimeAttendanceADS Groups, Departments and Employees to TAADSTest
+	Algorithm
+		save Roster
+		delete working schedules for week starting
+		save each schedule by shift
 
 Need to save roster every x minutes
 
@@ -19,9 +26,9 @@ Ability to mark Bank Holidays
 
 Modify shift dialog so that available hours are linked to the opening hours of the restaurant
 
-Load excuse code dynamically
-	change context menu to use dynamically loaded excuse codes
-	change excuse code regex to use dynamically loaded excuse codes
+Load excuse code dynamically (done)
+	change context menu to use dynamically loaded excuse codes (done)
+	change excuse code regex to use dynamically loaded excuse codes (done)
 
 Implement multicell cut, copy and paste
 
@@ -29,9 +36,28 @@ Implement Tooltip for cells when text is too long and for cells with errors.
 
 Add class 'invalid' shifts shorter than x hours and longer than y hours. Have x and y configurable by location.
 
+When changing weekending date shown location/weekending dialog with location disabled so that only the weekending can be changed.
+
+Account for Grade A and Grade B hours and maybe show hours as invalid when the respective miniumums are not met (done. The 28 & 36 hours limits are hardcoded)
+
+Need to handle situation where part of employee shift is entered on one roster and part of employee shift is entered on another roster (employee might be shared between branches).
+
+Need to have a read only version of the roster. Replace inputs with spans
+
+Need to have ability to print roster
+
 Issues:
 =======
 When shift cut and pasted the location and default position are not showing in the shift dialog (fixed)
 
 Need to add position to list of employees
+
+
+Algorithm for Saving Roster
+===========================
+1. Save all employees where the ID (not emp_no) is 0. On saving update the ID.
+2. Save all shifts where the isDirty is true.
+3. On deletion of row from roster. Record employee ID in array and delete all employees, listed in the array, and their shifts.
+
+If an employee is delete and re-added the ID should be 0.
 

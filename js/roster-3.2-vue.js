@@ -108,7 +108,7 @@ function hideShiftEntryModal() {
 }
 
 let patterns = { 
-    excudecode: '^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
+    excusecode: '^(off(?:\\s?\\(r\\))?|~)$', //'^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
     times: '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
     location: '(?:(?:\\s+)(?:@?)(~))', //'(?:(?:\\s+)@([a-z]{3,4}))'
     position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(cr|fc|pr|sr|cl|ck))',
@@ -119,7 +119,7 @@ let patterns = {
 
 let Validator = {
     isExcuse: function(value) {
-        var regex = new RegExp(patterns.excudecode, 'i');
+        var regex = new RegExp(patterns.excusecode, 'i');
         return regex.test(value);
     },
     isTimes: function(value) {
@@ -257,7 +257,7 @@ function Shift(date, shift = '') {
         return new Shift(date, shift);
     }
 
-    let _date = date; 
+    this.date = date; 
     this.shift = shift;
     this.starttime = null; 
     this.endtime = null; 
@@ -269,8 +269,8 @@ function Shift(date, shift = '') {
     this.parse = function() {
         if (Validator.validShift(this.shift)) {
             let times = Validator.getTime(this.shift);
-            this.starttime = new moment(`${_date.format('YYYY-MM-DD')} ${times.start}`, 'YYYY-MM-DD hh:mm a');
-            this.endtime = new moment(`${_date.format('YYYY-MM-DD')} ${times.end}`, 'YYYY-MM-DD hh:mm a');
+            this.starttime = new moment(`${this.date.format('YYYY-MM-DD')} ${times.start}`, 'YYYY-MM-DD hh:mm a');
+            this.endtime = new moment(`${this.date.format('YYYY-MM-DD')} ${times.end}`, 'YYYY-MM-DD hh:mm a');
             if (this.endtime.diff(this.starttime) < 0) {
                 this.endtime.add(1, 'days');
             }
@@ -612,7 +612,9 @@ let rostershift = {
         cut: function() {
             let copyText = this.$el; 
             copyText.select();
-            document.execCommand("cut");
+            if (document.execCommand("cut")) {
+                this.valueChanged();
+            }
         },
         copy: function() {
             let copyText = this.$el; 
@@ -623,6 +625,7 @@ let rostershift = {
             navigator.clipboard.readText().then(clipText =>
             {
                 this.schedule.shiftstring = clipText;
+                //this.schedule.isDirty = true;
                 this.valueChanged();
             });
         },
@@ -635,16 +638,15 @@ let rostershift = {
             action = action.toLowerCase();
             if (action === 'cut') {
                 this.cut();
-                this.emitChanged();
             } else if (action === 'copy') {
                 this.copy();
             } else if (action === 'paste') {
                 this.paste();
-                this.emitChanged();
             } else {
                 this.schedule.shiftstring = action;
                 this.schedule.setShifts()
                 this.schedule.format('short');
+                this.schedule.isDirty = true;
                 this.emitChanged();
             } 
         },
@@ -776,7 +778,7 @@ let rosterslot = {
                 </td>
                 <td 
                     class="col name" 
-                    :class="{invalid :nameNotSet}"
+                    :class="{invalid :nameNotSet, gradeA :isGradeA}"
                     v-on:dblclick="$emit('select-employee', employeeindex)"
                 >{{fullname}}</td>
                 <positionselector 
@@ -793,7 +795,7 @@ let rosterslot = {
                     v-on:update-hours="updatehours()"
                     v-on:enter-shifts="emitEnterShift">
                 </rostershiftcell>
-                <td class="col hours number">{{hours}}</td>
+                <td class="col hours number" :class="{invalid: !hoursMeetMinimum}">{{hours}}</td>
                </tr>`,
     components: {
        'rostershiftcell' : rostershiftcell,
@@ -814,6 +816,26 @@ let rosterslot = {
             if (this.fullname.trim() === '')
                 return true;
             return false;
+        },
+        isGradeA: function() {
+            if (this.employee.classA === '1') {
+                return true;
+            }
+            return false;
+        },
+        hoursMeetMinimum: function() {
+            if (this.hours === 0) {
+                return true;
+            } else {
+                let target = 28;
+                if (this.isGradeA) {
+                    target = 36;
+                }
+                if (this.hours < target) {
+                    return false;
+                }
+                return true;
+            }
         }
     },
     methods: {
@@ -857,7 +879,7 @@ let rosterslot = {
     },
     mounted() {
         this.updatehours();
-        EventBus.$on('CLOSED-SHIFTENTRYMODAL', () => {
+        EventBus.$on('SCHEDULE-UPDATED', () => {
             this.updatehours();
           })
     }
@@ -1280,9 +1302,12 @@ let shiftentry = {
                 this.schedule.shiftstring = this.localSchedule.shiftstring;
                 this.schedule.setShifts();
                 this.schedule.format('short');
-                EventBus.$emit('CLOSED-SHIFTENTRYMODAL');
+                this.emitScheduleUpdated();
                 this.reset();
             }
+        },
+        emitScheduleUpdated: function() {
+            EventBus.$emit('SCHEDULE-UPDATED');
         },
         gotoPageTwo: function() {
             //console.log('Go to page 2');
@@ -1375,6 +1400,7 @@ const app = new Vue({
         employees: null,
         savedschedules: null,
         positionQualifiers: null,
+        excusecodes: null,
         location: null,
         locID: '',
         weekending: null,
@@ -1444,21 +1470,27 @@ const app = new Vue({
                 this.loadPositionQualifiers();
                 this.loadRoster();
                 this.loadEmployees();
-                this.loadRosterSchedules();
+                //this.loadRosterSchedules();
                 this.loadSections();
                 this.loadAllocatedHours();
                 this.loadPositions();
                 this.loadOtherEmployees();
                 this.loadLocationsQualifiers();
+                this.loadExcuseCodes();
             }
         },
         employees: function(newval, oldval) {
             if (newval) {
-                for(let employee of this.employees) {
-                    //console.log(`For employee ${employee.emp_fname} ${employee.emp_lname}, defaultqualifier: ${employee.defaultQualifier}, defaultposition: ${employee.defaultPosition}`);
-                    employee.schedules = this.createSchedules(employee);
-                }
+                this.createEmployeeSchedules();
             }
+        },
+        savedschedules: function(newval, oldval) {
+            if (newval) {
+                this.showSavedEmployeeSchedules();
+            }
+        },
+        excusecodes: function() {
+            this.setExcuseCodesRegExPattern();
         }
     },
     computed: {
@@ -1491,6 +1523,18 @@ const app = new Vue({
                 pattern += this.locations[i].locID;
             }
             patterns.location = patterns.location.replace('~', pattern);
+        },
+        setExcuseCodesRegExPattern: function() {
+            let pattern = '';
+            for(let i = 0; i < this.excusecodes.length; i++) {
+                if (this.excusecodes[i].isoff === '0') {
+                    if (pattern) {
+                        pattern += '|';
+                    }
+                    pattern += this.excusecodes[i].code;
+                }
+            }
+            patterns.excusecode = patterns.excusecode.replace('~', pattern);
         },
         updatestats: function() {
             //console.log("updating stats");
@@ -1541,32 +1585,50 @@ const app = new Vue({
             let noofdays = day - 7
             return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
         },
-        createSchedule: function(weekDate, employee) {
-            let schedule = new Schedule(weekDate);
-            let shiftstring = this.findEmployeeSchedule(weekDate, employee);
-            if (shiftstring) {
-                schedule.shiftstring = shiftstring;
-                schedule.setShifts();
-                schedule.format('short');
-            } else {
-                schedule.defaultLocation = this.location.locID;
-                schedule.defaultQualifier = employee.defaultQualifier;
-                schedule.defaultPosition = employee.defaultPosition;
+        createEmployeeSchedules: function() {
+            for(let employee of this.employees) {
+                employee.schedules = this.createSchedules(employee);
             }
-            schedule.isDirty = false;
-            return schedule;
         },
-        findEmployeeSchedule: function(weekDate, employee) {
-            let result = null;
-            for(let i = 0; i < this.savedschedules.length; i++) {
-                let row = this.savedschedules[i];
-                if (row.emp_no === employee.emp_no && row.date === weekDate.format('YYYY-MM-DD')) {
-                    result = row.shiftstring;
+        showSavedEmployeeSchedules: function() {
+            for(let savedschedule of this.savedschedules) {
+                let employee = this.findEmployeeByEmpNo(savedschedule.emp_no);
+                let scheduleindex = this.findScheduleIndexByWeekDate(savedschedule.date);
+                if (employee && scheduleindex !== null) {
+                    let schedule = employee.schedules[scheduleindex];
+                    schedule.id = savedschedule.id;
+                    schedule.shiftstring = savedschedule.shiftstring;
+                    schedule.setShifts();
+                    schedule.format('short');
                 }
-
-                let match = (row.emp_no === employee.emp_no);
+            };
+            this.emitScheduleUpdated();
+        },
+        findEmployeeByEmpNo: function(emp_no) {
+            let result = null;
+            for(let employee of this.employees) {
+                if (employee.emp_no === emp_no) {
+                    return employee;
+                }
             }
             return result;
+        },
+        findScheduleIndexByWeekDate: function(date) {
+            for(let i = 0; i < 7; i++) {
+                if (this.weekDate(i + 1).format('YYYY-MM-DD') === date) {
+                    return i;
+                }
+            }
+            return null;
+        },
+        createSchedule: function(weekDate, employee) {
+            let schedule = new Schedule(weekDate);
+            schedule.id = '0';
+            schedule.defaultLocation = this.location.locID;
+            schedule.defaultQualifier = employee.defaultQualifier;
+            schedule.defaultPosition = employee.defaultPosition;
+            schedule.isDirty = false;
+            return schedule;
         },
         createSchedules: function(employee) {
             return [ 
@@ -1647,6 +1709,7 @@ const app = new Vue({
             .then(response => response.json())
             .then(json => {
                 this.employees = json;
+                this.loadRosterSchedules();
             })
         },
         loadPositionQualifiers: function() {
@@ -1694,13 +1757,21 @@ const app = new Vue({
             })
         },
         loadRosterSchedules: function() {
-            let url = `getrosterschedules.php?weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            let url = `getrosterschedules.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             fetch(url)
             .then(response => response.json())
             .then(results => {
                 if (results) {
-                    this.saveRosterSchedule = results;
+                    this.savedschedules = results;
                 }
+            })
+        },
+        loadExcuseCodes: function() {
+            let url = 'getexcusecodes.php';
+            fetch(url)
+            .then(response => response.json())
+            .then(results => {
+                this.excusecodes = results;
             })
         },
         saveRoster: function() {
@@ -1717,13 +1788,15 @@ const app = new Vue({
             if (this.roster.id) {
                 //this.roster = result[0];
                 this.saveRosterEmployees();
-                this.removeDeletedRosterEmployees();
+                //this.removeDeletedRosterEmployees();
             }
         },
         saveRosterEmployees: function() {
             for(let employee of this.employees) {
                 if (!employee.id || employee.id === '0') {
                     this.saveRosterEmployee(employee); 
+                } else {
+                    this.saveRosterSchedules(employee);
                 }
             }
         },
@@ -1753,11 +1826,12 @@ const app = new Vue({
                     if (!employee.id || employee.id === "0") {
                         employee.id = result[0].id;
                     }
-                    for(let schedule of employee.schedules) {
-                        if (schedule.isDirty) {
-                            this.saveRosterSchedule(employee.id, schedule);
-                        }
-                    }
+                    // for(let schedule of employee.schedules) {
+                    //     if (schedule.isDirty) {
+                    //         this.saveRosterSchedule(employee.id, schedule);
+                    //     }
+                    // }
+                    this.saveRosterSchedules(employee);
                 }
             })
 
@@ -1765,20 +1839,122 @@ const app = new Vue({
         deleteRosterEmployee: function(id) {
             let url = `deleterosteremployee.php?id=${id}`;
             fetch(url)
-            .then(reponse => response.json())
+            .then(response => response.json())
             .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
         },
+        saveRosterSchedules: function(employee) {
+            for(let schedule of employee.schedules) {
+                if (schedule.isDirty) {
+                    if (schedule.shiftstring) {
+                        this.saveRosterSchedule(employee.id, schedule);
+                    } else {
+                        if (parseInt(schedule.id) > 0) {
+                            this.deleteEmployeeSchedule(schedule.id)
+                        }
+                    }
+                }
+            }
+        },
         saveRosterSchedule(rosterempid, schedule) {
-            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${schedule.shiftstring}`;
+            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURI(schedule.shiftstring)}`;
             console.log(`For rosterempid: ${rosterempid}, the url is ${url}`);
             fetch(url)
-            .then(reponse => response.json())
+            .then(response => response.json())
             .then(id => {
                 if (id) {
                     schedule.id = id
                     schedule.isDirty = false;
                 }
             })
+        },
+        deleteEmployeeSchedule: function(id) {
+            let url = `deleteemployeeschedule.php?id=${id}`;
+            fetch(url)
+            .then(response => response.json())
+            .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
+        },
+        insertPayException: function(employee, schedule) {
+            //console.log('Insert Pay Exception');
+            let pComment = this.getPComment(schedule.shiftstring);
+            if (pComment) {
+                let formData = new FormData();
+                formData.append('emp_no', employee.emp_no);
+                formData.append('pComment', pComment);
+                formData.append('date', schedule.date.format('YYYY-MM-DD'));
+                formData.append('islive', this.location.isLive);
+                let url = 'insertPayException.php';
+                fetch(url, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .catch(error => console.error(`Failed to insert pay exception ${schedule.shiftstring} for employee ${employee.emp_no}`));
+            }
+        },
+        deleteSchedule: function(employee, date) {
+            let url = `deleteSchedule.php?&emp_no=${employee.emp_no}&date=${date.format('YYYY-MM-DD')}&islive=${this.location.isLive}`;
+            return fetch(url)
+            .then(response => response.json())
+            .catch(error => console.error(`Failed to delete Working Schedule`, error));
+        },
+        deleteSchedules: function(onSuccess) {
+            let promises = [];
+            for(let employee of this.employees) {
+                for(let schedule of employee.schedules) {
+                    promises.push(this.deleteSchedule(employee, schedule.date));
+                }
+            }
+            return promises;
+        },
+        insertWorkingSchedule: function(employee, shift) {
+            let formData = new FormData();
+            formData.append('emp_no', employee.emp_no);
+            formData.append('date', shift.date.format('YYYY-MM-DD hh:mma'));
+            formData.append('start', shift.starttime.format('YYYY-MM-DD hh:mma'));
+            formData.append('stop', shift.endtime.format('YYYY-MM-DD hh:mma'));
+            formData.append('locid', shift.location);
+            formData.append('position', shift.position);
+            formData.append('qualifier', shift.qualifier);
+            formData.append('islive', this.location.isLive);
+            let url = 'insertWorkingSchedule.php';
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .catch(error => console.error(`Failed to insert shift ${shift.format()} for employee ${employee.emp_no}`));
+        },
+        insertSchedules: function() {
+            for(let employee of this.employees) {
+                for(let schedule of employee.schedules) {
+                    if (schedule.isExcuse()) {
+                        this.insertPayException(employee, schedule);
+                    } else {
+                        if (schedule.firstShift) {
+                            this.insertWorkingSchedule(employee, schedule.firstShift);
+                        }
+                        if (schedule.secondShift) {
+                            this.insertWorkingSchedule(employee, schedule.secondShift);
+                        }
+                    }
+                }
+            }
+        },
+        exportToAcumen: function() {
+            this.saveRoster(); //save roster
+            let promises = this.deleteSchedules(); //delete all existing working schedules
+            Promise.all(promises)
+            .then(this.insertSchedules());
+        },
+        getPComment: function(code) {
+            if (this.excusecodes) {
+                for(let i = 0; i < this.excusecodes.length; i++) {
+                    if (this.excusecodes[i].code === code) {
+                        return this.excusecodes[i].pComment;
+                    }
+                }
+            }
+            return null;
         },
         extractPositions: function(positionsarray) {
             this.positions = [];
@@ -1929,7 +2105,10 @@ const app = new Vue({
         save: function() {
             //console.log('Save roster');
             this.saveRoster();
-        }
+        },
+        emitScheduleUpdated: function() {
+            EventBus.$emit('SCHEDULE-UPDATED');
+        },
     },
     created: function() {
         let url = `getlocations-2.php`;

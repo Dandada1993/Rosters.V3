@@ -5,7 +5,7 @@
 
     $rosterempid = $parameters['rosterEmpID'];
     $date = $parameters['date'];
-    $shiftstring = $parameters['shiftstring'];
+    $shiftstring = urldecode($parameters['shiftstring']);
     $database = new database($serverName, $dbname, $userid, $password);
     $database->execProcedure('roster.cp_addemployeeshift');
     $database->addParameter('rosterempid', $rosterempid, PDO::PARAM_STR);
