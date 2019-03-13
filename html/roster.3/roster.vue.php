@@ -37,11 +37,11 @@
                                 <li><a href="#" v-on:click="save">Save</a></li>
                                 <li><a href="#">Change End Date</a></li>
                                 <li class="divider"></li>
-                                <li><a href="#">Print</a></li>
+                                <li><a href="#" v-on:click="menuoption_print">Print</a></li>
                                 <li><a href="#">Send for Approval</a></li>
                                 <li><a href="#">Approve</a></li>
                                 <li class="divider"></li>
-                                <li><a href="#" v-on:click="exportToAcumen">Export to Acumen</a></li>
+                                <li><a href="#" v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -85,13 +85,13 @@
                         <td class="col rowheader header" data-col="1">&nbsp;</td>
                         <td class="col header name" data-col="2">Name</td>
                         <td class="col header position" data-col="3">Position</td>
-                        <td class="col header shift" data-col="4">Wednesday</td>
-                        <td class="col header shift" data-col="5">Thursday</td>
-                        <td class="col header shift" data-col="6">Friday</td>
-                        <td class="col header shift" data-col="7">Saturday</td>
-                        <td class="col header shift" data-col="8">Sunday</td>
-                        <td class="col header shift" data-col="9">Monday</td>
-                        <td class="col header shift" data-col="10">Tuesday</td>
+                        <td class="col header shift" data-col="4"><span class="longname">Wednesday</span><span class="shortname">Wed</span></td>
+                        <td class="col header shift" data-col="5"><span class="longname">Thursday</span><span class="shortname">Thu</span></td>
+                        <td class="col header shift" data-col="6"><span class="longname">Friday</span><span class="shortname">Fri</span></td>
+                        <td class="col header shift" data-col="7"><span class="longname">Saturday</span><span class="shortname">Sat</span></td>
+                        <td class="col header shift" data-col="8"><span class="longname">Sunday</span><span class="shortname">Sun</span></td>
+                        <td class="col header shift" data-col="9"><span class="longname">Monday</span><span class="shortname">Mon</span></td>
+                        <td class="col header shift" data-col="10"><span class="longname">Tuesday</span><span class="shortname">Tue</span></td>
                         <td class="col header hours" data-col="11">Hours</td>
                     </tr>
                 </tbody>
@@ -164,23 +164,24 @@
                 </div>
             </div>
         </div>
-        <!-- <div ref="generic-dialog" id="generic-dialog" class="modal fade" tabindex=-1 role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h4 class="modal-title"><slot name="title"></slot></h4>
-                    </div>
-                    <div class="modal-body">
-                        <slot name="body"></slot>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button id="generic-dialogOK" type="button" class="btn btn-primary" v-on:click="">OK</button>
-                    </div>
+        <div ref="missingCellsDialog" 
+            is="genericdialog"
+            show-cancel
+            handle="missing-cells"
+            title="Shifts missing or invalid">
+            <template slot="body">
+                <div class="form-group">
+                    <p v-if="nomissingcells > 0">There <span v-if="nomissingcells > 1">are</span><span v-else>is</span> 
+                    <strong>{{nomissingcells}}</strong> missing shift<span v-if="nomissingcells > 1">s</span>.</p>
+                    <p v-if="noinvalidcells > 0"><p>There <span v-if="noinvalidcells > 1">are</span><span v-else>is</span> 
+                    <strong>{{noinvalidcells}}</strong> invalid cell<span v-if="noinvalidcells > 1">s</span>.</p>
+                    <p>Are you sure you want to continue to export to Acumen?</p>
                 </div>
-            </div>
-        </div> -->
+            </template>
+            <template slot="btn_ok">
+                <button type="button" class="btn btn-primary" v-on:click="missingCellsModalOKClicked">Proceed</button>
+            </template>
+        </div>
         <div is="selectemployee"
             :deletedemployees="deletedemployees"
             :otheremployees="otheremployees"

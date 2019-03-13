@@ -64,11 +64,16 @@ td:not(.shift) {
     max-height: 50px;
 }
 
+.title {
+    margin-top: -1px;
+    margin-bottom: -1px;
+}
+
 .section .title {
     border-left: 1px solid #95A5A6;
     border-right: 1px solid #95A5A6;
-    margin-left: 1px;
-    margin-right: 1px;
+    /* margin-left: 1px;
+    margin-right: 1px; */
     padding-left: 10px;
     vertical-align: middle;
     line-height: 50px;
@@ -213,4 +218,49 @@ td.position {
 .contextmenu-disabled {
     pointer-events:none; 
     opacity:0.6;         
+}
+
+.shortname {
+    display: none;
+}
+
+.shift-read {
+    display: none;
+}
+
+@media print {
+    .rowheader,
+    .position,
+    .hours,
+    .btn-add,
+    .stats,
+    .rostertotals,
+    .longname,
+    .shift-input {
+        display: none;
+    }
+
+    .shortname {
+        display: inline;
+    }
+
+    .shift-read {
+        display: inline;
+        font-size: 1.2rem;
+    }
+
+    .rosterrow {
+        height: 0px;
+        max-height: 0px;
+    }
+
+    .section .title {
+        height: 20px;
+        max-height: 20px;
+        line-height: 20px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
 }

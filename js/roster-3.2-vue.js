@@ -403,6 +403,85 @@ function Schedule(date) {
         return false;
     }
 
+    this.formatFirstShift = function(format) {
+        let firstShift_options = {};
+        if (this.secondShift) {
+            if (this.secondShift.location === this.firstShift.location) {
+                firstShift_options.showlocation = false;
+            } else {
+                if (this.firstShift.location !== this.defaultLocation) {
+                    firstShift_options.showlocation = true;
+                }
+            }
+            if (this.secondShift.qualifier === this.firstShift.qualifier) {
+                firstShift_options.showqualifier = false;
+            } else {
+                if (this.firstShift.qualifier !== this.defaultQualifier) {
+                    firstShift_options.showqualifier = true;
+                }
+            }
+            if (this.secondShift.position === this.firstShift.position) {
+                firstShift_options.showposition = false;
+            } else {
+                if (this.firstShift.position !== this.defaultPosition) {
+                    firstShift_options.showposition = true;
+                }
+            }
+        } else {
+            if (this.firstShift.location !== this.defaultLocation) {
+                firstShift_options.showlocation = true;
+            }
+            if (this.firstShift.qualifier !== this.defaultQualifier) {
+                firstShift_options.showqualifier = true;
+            }
+            if (this.firstShift.position !== this.defaultPosition) {
+                firstShift_options.showposition = true;
+            }
+        }
+        return this.firstShift.format(format, firstShift_options);
+    }
+
+    this.formatSecondShift = function(format) {
+        let secondShift_options = {};
+        if (this.secondShift.location === this.firstShift.location) {
+            if (this.secondShift.location === this.defaultLocation) {
+                secondShift_options.showlocation = false;
+            }
+            else {
+                secondShift_options.showlocation = true;
+            }
+        } else {
+            if (this.secondShift.location !== this.defaultLocation) {
+                secondShift_options.showlocation = true;
+            }
+        }
+        if (this.secondShift.qualifier === this.firstShift.qualifier) {
+            if (this.secondShift.qualifier === this.defaultQualifier) {
+                secondShift_options.showqualifier = false;
+            }
+            else {
+                secondShift_options.showqualifier = true;
+            }
+        } else {
+            if (this.secondShift.qualifier !== this.defaultQualifier) {
+                secondShift_options.showqualifier = true;
+            }
+        }
+        if (this.secondShift.position === this.firstShift.position) {
+            if (this.secondShift.position === this.defaultPosition) {
+                secondShift_options.showposition = false;
+            }
+            else {
+                secondShift_options.showposition = true;
+            }
+        } else {
+            if (this.secondShift.position !== this.defaultPosition) {
+                secondShift_options.showposition = true;
+            }
+        }
+        return this.secondShift.format(format, secondShift_options);
+    }
+
     this.format = function(format) { 
         let retval = '';
         if (Validator.isExcuse(this.shiftstring)) {
@@ -699,6 +778,9 @@ let rostershiftcell = {
                         v-on:cellchanged="emitUpdateHours"
                         v-on:enter-shifts="emitEnterShift">
                     </rostershift>
+                    <span v-if="schedule.firstShift" class="shift-read">{{schedule.formatFirstShift('short')}}</span>
+                    <span v-if="schedule.secondShift" class="shift-read"><br></span>
+                    <span v-if="schedule.secondShift" class="shift-read">{{schedule.formatSecondShift('short')}}</span>
                 </td>`,
     components: {
         'rostershift' : rostershift
@@ -706,6 +788,18 @@ let rostershiftcell = {
     data: function() {
         return {
             isActive : false
+        }
+    },
+    computed: {
+        firstShiftString: function() {
+            if (this.schedule.firstShift) {
+                this.schedule.firstShift.format('short');
+            }
+        },
+        secondShiftString: function() {
+            if (this.schedule.secondShift) {
+                return this.schedule.secondShift.format('short');
+            }
         }
     },
     methods: {
@@ -858,6 +952,9 @@ let rosterslot = {
             if (this.fullname.trim() === '') {
                 noinvalidcells += 1;
             }
+            if (!this.hoursMeetMinimum) {
+                noinvalidcells += 1;
+            }
             return noinvalidcells;
         },
         updatehours: function() {
@@ -887,17 +984,23 @@ let rosterslot = {
 
 let rostersection = {
     props: ['section', 'employees', 'qualifiers', 'positions'],
-    template: `<div class="section" v-bind:data-sectionID="section.id">
-                <div class="title">{{section.name}}
-                    <span>
-                        <button 
-                            type="button" 
-                            class="btn btn-sm btn-add" 
-                            v-on:click="emitAddEmployee()"
-                            tabindex="-1">Add
-                        </button>
-                    </span>
-                </div>
+    template: `<div v-bind:data-sectionID="section.id">
+                <table class="title">
+                    <tbody>
+                        <tr>
+                            <td>{{section.name}}
+                                <span>
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-sm btn-add" 
+                                        v-on:click="emitAddEmployee()"
+                                        tabindex="-1">Add
+                                    </button>
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <table class="details">
                     <tbody>
                         <rosterslot 
@@ -1391,6 +1494,31 @@ let shiftentry = {
     }
 }
 
+let genericdialog = {
+    props: {
+        showCancel: Boolean,
+        handle: String,
+        title: String
+    },
+    template: `<div v-bind:id="handle" class="modal fade" tabindex=-1 role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button v-if="showCancel" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            <h4 class="modal-title">{{title}}</h4>
+                        </div>
+                        <div class="modal-body">
+                            <slot name="body">Default Value</slot>
+                        </div>
+                        <div class="modal-footer">
+                            <button v-if="showCancel" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            <slot name="btn_ok">Default Button Value</slot>
+                        </div>
+                    </div>
+                </div>
+            </div>`
+}
+
 const app = new Vue({
     el: '#main',
     data: {
@@ -1440,7 +1568,8 @@ const app = new Vue({
         'rostersection' : rostersection,
         'selectemployee' : selectemployee,
         'shiftentry' : shiftentry,
-        'datepicker' : vuejsDatepicker
+        'datepicker' : vuejsDatepicker,
+        'genericdialog' : genericdialog
     },
     watch: {
         locations: function() {
@@ -1477,6 +1606,8 @@ const app = new Vue({
                 this.loadOtherEmployees();
                 this.loadLocationsQualifiers();
                 this.loadExcuseCodes();
+
+                document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
             }
         },
         employees: function(newval, oldval) {
@@ -1945,6 +2076,20 @@ const app = new Vue({
             let promises = this.deleteSchedules(); //delete all existing working schedules
             Promise.all(promises)
             .then(this.insertSchedules());
+        },
+        menuoption_exportToAcumen: function() {
+            if (this.nomissingcells > 0) {
+                $(this.$refs.missingCellsDialog.$el).modal('show');
+            } else {
+                this.exportToAcumen();
+            }
+        },
+        missingCellsModalOKClicked: function() {
+            $(this.$refs.missingCellsDialog.$el).modal('hide');
+            this.exportToAcumen();
+        },
+        menuoption_print: function() {
+            window.print();
         },
         getPComment: function(code) {
             if (this.excusecodes) {
