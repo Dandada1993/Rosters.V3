@@ -34,7 +34,7 @@ Implement multicell cut, copy and paste
 
 Implement Tooltip for cells when text is too long and for cells with errors.
 
-Add class 'invalid' shifts shorter than x hours and longer than y hours. Have x and y configurable by location.
+Highlight shifts shorter than x hours and longer than y hours. Have x and y configurable by location.
 
 When changing weekending date shown location/weekending dialog with location disabled so that only the weekending can be changed.
 
@@ -64,6 +64,12 @@ Maintenance
 	Need to be able to identify persons with an without vehicles.
 
 Make positions in position regular expression dynamic
+
+Highlight shifts not at currently location i.e. loaned employees when flag is set in LocationsDef
+
+Highlight visiting employees when flag is set in LocationsDef
+
+Add additional menu options e.g. setting location on highlighted cells
 
 Issues:
 =======

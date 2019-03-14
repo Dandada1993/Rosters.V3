@@ -2014,7 +2014,7 @@ const app = new Vue({
         },
         saveRosterSchedule(rosterempid, schedule) {
             let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURI(schedule.shiftstring)}`;
-            console.log(`For rosterempid: ${rosterempid}, the url is ${url}`);
+            //console.log(`For rosterempid: ${rosterempid}, the url is ${url}`);
             fetch(url)
             .then(response => response.json())
             .then(id => {
@@ -2044,14 +2044,14 @@ const app = new Vue({
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
-                .catch(error => console.error(`Failed to insert pay exception ${schedule.shiftstring} for employee ${employee.emp_no}`));
+                // .then(response => response.json())
+                .catch(error => console.error(`Failed to insert pay exception ${schedule.shiftstring} for employee ${employee.emp_no}. `, error));
             }
         },
         deleteSchedule: function(employee, date) {
             let url = `deleteSchedule.php?&emp_no=${employee.emp_no}&date=${date.format('YYYY-MM-DD')}&islive=${this.location.isLive}`;
             return fetch(url)
-            .then(response => response.json())
+            // .then(response => response.json())
             .catch(error => console.error(`Failed to delete Working Schedule`, error));
         },
         deleteSchedules: function(onSuccess) {
@@ -2078,8 +2078,8 @@ const app = new Vue({
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .catch(error => console.error(`Failed to insert shift ${shift.format()} for employee ${employee.emp_no}`));
+            // .then(response => response.json())
+            .catch(error => console.error(`Failed to insert shift ${shift.format()} for employee ${employee.emp_no}. `, error));
         },
         insertSchedules: function() {
             for(let employee of this.employees) {
@@ -2088,9 +2088,11 @@ const app = new Vue({
                         this.insertPayException(employee, schedule);
                     } else {
                         if (schedule.firstShift) {
+                            // console.log('Inserting shift 1');
                             this.insertWorkingSchedule(employee, schedule.firstShift);
                         }
                         if (schedule.secondShift) {
+                            // console.log('Inserting shift 2');
                             this.insertWorkingSchedule(employee, schedule.secondShift);
                         }
                     }
