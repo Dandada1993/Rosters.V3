@@ -81,10 +81,10 @@
         <div v-if="sections">
             <table>
                 <tbody>
-                    <tr class="rosterrow" data-row="0">
-                        <td class="col rowheader header" data-col="1">&nbsp;</td>
-                        <td class="col header name" data-col="2">Name</td>
-                        <td class="col header position" data-col="3">Position</td>
+                    <tr data-row="0">
+                        <td class="col rowheader header" data-col="1" rowspan="2">&nbsp;</td>
+                        <td class="col header name" data-col="2" rowspan="2">Names</td>
+                        <td class="col header position" data-col="3" rowspan="2">Position</td>
                         <td class="col header shift" data-col="4"><span class="longname">Wednesday</span><span class="shortname">Wed</span></td>
                         <td class="col header shift" data-col="5"><span class="longname">Thursday</span><span class="shortname">Thu</span></td>
                         <td class="col header shift" data-col="6"><span class="longname">Friday</span><span class="shortname">Fri</span></td>
@@ -92,7 +92,20 @@
                         <td class="col header shift" data-col="8"><span class="longname">Sunday</span><span class="shortname">Sun</span></td>
                         <td class="col header shift" data-col="9"><span class="longname">Monday</span><span class="shortname">Mon</span></td>
                         <td class="col header shift" data-col="10"><span class="longname">Tuesday</span><span class="shortname">Tue</span></td>
-                        <td class="col header hours" data-col="11">Hours</td>
+                        <td class="col header hours" data-col="11" rowspan="2">Hours</td>
+                    </tr>
+                    <tr class="secondary" data-row="0">
+                        <!-- <td class="col rowheader header" data-col="1">&nbsp;</td> -->
+                        <!-- <td class="col header name" data-col="2">{{month}}</td> -->
+                        <!-- <td class="col header position" data-col="3">&nbsp;</td> -->
+                        <td class="col header shift" data-col="4">{{displayDayDate(1)}}</td>
+                        <td class="col header shift" data-col="5">{{displayDayDate(2)}}</td>
+                        <td class="col header shift" data-col="6">{{displayDayDate(3)}}</td>
+                        <td class="col header shift" data-col="7">{{displayDayDate(4)}}</td>
+                        <td class="col header shift" data-col="8">{{displayDayDate(5)}}</td>
+                        <td class="col header shift" data-col="9">{{displayDayDate(6)}}</td>
+                        <td class="col header shift" data-col="10">{{displayDayDate(7)}}</td>
+                        <!-- <td class="col header hours" data-col="11">&nbsp;</td> -->
                     </tr>
                 </tbody>
             </table>

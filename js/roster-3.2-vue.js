@@ -1,7 +1,8 @@
 let data = {
     employees: [],
     location: null,
-    clipboard : ''
+    clipboard : '',
+    shortcuts: []
 }
 
 const EventBus = new Vue();
@@ -111,7 +112,7 @@ let patterns = {
     excusecode: '^(off(?:\\s?\\(r\\))?|~)$', //'^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
     times: '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
     location: '(?:(?:\\s+)(?:@?)(~))', //'(?:(?:\\s+)@([a-z]{3,4}))'
-    position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(cr|fc|pr|sr|cl|ck))',
+    position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(cr|fc|pr|sr|cl|ck|mt))',
     time: '^(0?\\d|1(?:0|1|2))((?:(\\:)?)((?:0|3)0))?\\s*((?:a|p)m?)',
     qualifier: '(rest|barn|dtru)',
     comment: '(?:\\*\\*)([A-Za-z\\s]+)'
@@ -603,12 +604,12 @@ let rostershift = {
     data: function() {
         return {
             //shiftstring: this.schedule.shiftstring,
-            shortcuts: {
-                o: 'OFF',
-                or: 'OFF (R)',
-                s: 'SL',
-                i: 'IL'
-            },
+            // shortcuts: {
+            //     o: 'OFF',
+            //     or: 'OFF (R)',
+            //     s: 'SL',
+            //     i: 'IL'
+            // },
             highlighted: false
         }
     },
@@ -631,10 +632,15 @@ let rostershift = {
     },
     methods: {
         valueChanged: function() {
-            for(let key in this.shortcuts){
-                if (this.schedule.shiftstring === key) {
-                    this.schedule.shiftstring = this.shortcuts[key];
-                    break;
+            // for(let key in this.shortcuts){
+            //     if (this.schedule.shiftstring === key) {
+            //         this.schedule.shiftstring = this.shortcuts[key];
+            //         break;
+            //     }
+            // }
+            for(let shortcut of data.shortcuts) {
+                if(this.schedule.shiftstring.toLowerCase() === shortcut.shortcut.toLowerCase()) {
+                    this.schedule.shiftstring = shortcut.replacement;
                 }
             }
             if (this.isValid){
@@ -781,6 +787,7 @@ let rostershiftcell = {
                     <span v-if="schedule.firstShift" class="shift-read">{{schedule.formatFirstShift('short')}}</span>
                     <span v-if="schedule.secondShift" class="shift-read"><br></span>
                     <span v-if="schedule.secondShift" class="shift-read">{{schedule.formatSecondShift('short')}}</span>
+                    <span v-if="schedule.isExcuse()" class="shift-read">{{schedule.shiftstring}}</span>
                 </td>`,
     components: {
         'rostershift' : rostershift
@@ -875,8 +882,8 @@ let rosterslot = {
                     :class="{invalid :nameNotSet, gradeA :isGradeA}"
                     v-on:dblclick="$emit('select-employee', employeeindex)"
                 >{{fullname}}</td>
-                <positionselector 
-                    :employee="employee" 
+                <positionselector tabindex="-1"
+                    :employee="employee"    
                     :positions="positions"
                     :hasqualifier="hasqualifier">
                 </positionselector>
@@ -889,7 +896,7 @@ let rosterslot = {
                     v-on:update-hours="updatehours()"
                     v-on:enter-shifts="emitEnterShift">
                 </rostershiftcell>
-                <td class="col hours number" :class="{invalid: !hoursMeetMinimum}">{{hours}}</td>
+                <td class="col hours number" :class="{invalid: !hoursMeetMinimum}" tabindex="-1">{{hours}}</td>
                </tr>`,
     components: {
        'rostershiftcell' : rostershiftcell,
@@ -1316,10 +1323,15 @@ let shiftentry = {
                                 <div class="form-group row">
                                     <div class="col-xs-6">
                                         <label for="position" :class="{haserrors: errors.position}">Position<span v-show="errors.location"><strong>&nbsp;&#10033;</strong></span></label>
-                                        <select id="position" v-model="currentPosition" class="form-control">
-                                            <option value="" disabled>Select position</option>
-                                            <option v-for="row in locationsqualifiers" v-if="row.locID===locID" :value="row.position">{{row.position}}</option>
-                                        </select>
+                                        <template v-if="location.positionfixed==='0'">
+                                            <select id="position" v-model="currentPosition" class="form-control">
+                                                <option value="" disabled>Select position</option>
+                                                <option v-for="row in locationsqualifiers" v-if="row.locID===locID" :value="row.position">{{row.position}}</option>
+                                            </select>
+                                        </template>
+                                        <template v-else>
+                                            <input class="form-control" type="text" v-model="currentPosition" readonly />
+                                        </template> 
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -1606,7 +1618,7 @@ const app = new Vue({
                 this.loadOtherEmployees();
                 this.loadLocationsQualifiers();
                 this.loadExcuseCodes();
-
+                this.loadShortcuts();
                 document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
             }
         },
@@ -1629,13 +1641,10 @@ const app = new Vue({
             return this.agreedhours - this.totalhours;
         },
         weekendingDisplay: function() {
-            let dows = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            let day = this.weekending.getDate();
-            let dow = dows[this.weekending.getDay()];
-            let month = months[this.weekending.getMonth()];
-            let year = this.weekending.getFullYear();
-            return `${dow} ${month} ${day}, ${year}`;
+            return moment(this.formatWeekending(), 'MM/DD/YYYY').format('dddd MMM D, YYYY');
+        },
+        month: function() {
+            return moment(this.formatWeekending(), 'MM/DD/YYYY').format('MMMM');
         }
     },
     methods: {
@@ -1713,8 +1722,17 @@ const app = new Vue({
             this.updatestats();
         },
         weekDate: function(day) {  //wed: 1, tue: 7
-            let noofdays = day - 7
+            let noofdays = day - 7;
             return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
+        },
+        displayDayDate: function(day) {
+            let noofdays = day - 7;
+            let m = moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
+            if (day === 1 || m.date() === 1) {
+                return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days').format('MMM D');
+            } else {
+                return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days').format('D');
+            }
         },
         createEmployeeSchedules: function() {
             for(let employee of this.employees) {
@@ -1903,6 +1921,14 @@ const app = new Vue({
             .then(response => response.json())
             .then(results => {
                 this.excusecodes = results;
+            })
+        },
+        loadShortcuts: function() {
+            let url = `getshortcuts.php?locID=${this.location.locID}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(results => {
+                data.shortcuts = results;
             })
         },
         saveRoster: function() {

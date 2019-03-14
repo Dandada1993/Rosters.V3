@@ -1,4 +1,4 @@
-Implement context sensitive menu (single cell pasted only)
+Implement context sensitive menu (single cell paste only)
 	Cut
 	Copy
 	Paste
@@ -6,14 +6,14 @@ Implement context sensitive menu (single cell pasted only)
 	
 Ability to highlight multiple cells (completed)
 
-Save roster to database
+Save roster to database (done - testing)
 	Save roster to roster.Rosters. Retrieve ID
 	For each employee save to roster.RosterEmps -- how to handle situation where employee already exists
 		For each shift save to roster.RosterEmpsShifts -- how to handle situation where shift already exists
 
-Retrieve roster from database (testing)
+Retrieve roster from database (done - testing)
 
-Saving to Working Schedules
+Saving to Working Schedules (done - testing)
 	Copy TimeAttendanceADS Groups, Departments and Employees to TAADSTest
 	Algorithm
 		save Roster
@@ -45,6 +45,25 @@ Need to handle situation where part of employee shift is entered on one roster a
 Need to have a read only version of the roster. Replace inputs with spans
 
 Need to have ability to print roster
+
+Add Confirmation dialog when Exporting to Acumen (done)
+
+Add ability to change week ending. This can be used to copy a roster e.g. recall roster for previous week, change date and save. However, situation may arise were an incorrect week (in the future) is chosen. Schedules are entered and saved and then the error is realised. If the weekending is changed to a week in the past first check and ensure that schedules have not been entered nor exported for that week, then prompt the user to ask if the saved scheduled for the 'wrong' weekending should be deleted.
+
+Implement generic dialog for export to acumen confirmation and deleting shifts on change week 
+
+Add flag which indicates that the roster has been exported to Acumen and a date time stamp when exported.
+
+Disable the Export to Acumen option if the roster has been exported previously and not saved subsequently or there are no dirty cells.
+
+Add dates to the roster header below the day labels (done)
+
+Maintenance
+	Add mechanism where D & N can be entered and replaced with 830a-5p and 130p-10p automatically (done)
+	Need to be able to assign maintenance to a branch. If this not currently working as position are resticted to non-maintenance positions. (done)
+	Need to be able to identify persons with an without vehicles.
+
+Make positions in position regular expression dynamic
 
 Issues:
 =======

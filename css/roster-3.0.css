@@ -30,6 +30,10 @@ td:not(.shift) {
     text-align: center;
 }
 
+.secondary .header {
+    font-size: 1.4rem;
+}
+
 .rowheader {
     max-width: 50px;
     width: 3%; 
