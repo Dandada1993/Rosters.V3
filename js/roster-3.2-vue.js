@@ -1231,7 +1231,7 @@ let shiftentry = {
                                     <div class="col-xs-6">
                                         <label for="location">Location</label>
                                         <select id="location" v-model="locID" class="form-control">
-                                            <option v-for="loc in locations" v-if="loc.type === 'R' || loc.type === 'C'" :value="loc.locID">{{loc.name}}</option>
+                                            <option v-for="loc in locations" v-if="isValidRosteredAtLocation(loc)" :value="loc.locID">{{loc.name}}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1426,6 +1426,10 @@ let shiftentry = {
                 currentposition = shift.position;
             }
             return currentposition;
+        },
+        isValidRosteredAtLocation: function(target) {
+            let regex = new RegExp(this.location.rosteredat, 'gi');
+            return regex.test(target.type);
         }
     },
     mounted () {
@@ -1559,7 +1563,7 @@ let selectemployee = {
 }
 
 let copyfromroster = {
-    props: [approvedrosters],
+    props: ['approvedrosters'],
     data: function() {
         return {
             searchText: ''
@@ -1575,7 +1579,7 @@ let copyfromroster = {
                     show-cancel
                     v-on:input="searchTextChanged">
                     <template slot="elements">
-                        <template v-if="approvedrosters.length > 0"
+                        <template v-if="approvedrosters.length > 0">
                             <li
                                 v-for="roster in approvedrosters"
                                 v-show="matchesSearch(roster)"
@@ -1802,13 +1806,23 @@ const app = new Vue({
             let noofdays = day - 7;
             return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
         },
+        displayDayNameLong: function(day) {
+            let noofdays = day - 7;
+            let m = moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
+            return m.format('dddd');
+        },
+        displayDayNameShort: function(day) {
+            let noofdays = day - 7;
+            let m = moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
+            return m.format('ddd');
+        },
         displayDayDate: function(day) {
             let noofdays = day - 7;
             let m = moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days');
             if (day === 1 || m.date() === 1) {
-                return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days').format('MMM D');
+                return m.format('MMM D');
             } else {
-                return moment(this.formatWeekending(), 'MM/DD/YYYY').add(noofdays, 'days').format('D');
+                return m.format('D');
             }
         },
         createEmployeeSchedules: function() {
@@ -2262,13 +2276,16 @@ const app = new Vue({
         },
         setLocation: function() {
             if (this.locID && this.weekending) {
-                for(let location of this.locations) {
-                    if (location.locID === this.locID) {
-                        this.location = location;
-                        break;
-                    }
+                this.location = this.getLocation(this.locID);
+            }
+        },
+        getLocation: function(locid) {
+            for(let location of this.locations) {
+                if (location.locID === locid) {
+                    return location;
                 }
             }
+            return null;
         },
         formatWeekending: function() {
             let day = this.weekending.getDate();
@@ -2346,7 +2363,16 @@ const app = new Vue({
             return isvalid;
         },
         locationChanged: function() {
-            this.isValidLocation();
+            if (this.isValidLocation()){
+                let location = this.getLocation(this.locID);
+                let weekends = parseInt(location.weekends);
+                this.disabledDates.days = [];
+                for(let i = 0; i < 7; i++) {
+                    if (i !== weekends - 1) {
+                        this.disabledDates.days.push(i);
+                    }
+                }
+            };
         },
         weekendingSelected: function() {
             this.isValidWeekending();

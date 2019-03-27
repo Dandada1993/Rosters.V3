@@ -122,13 +122,13 @@
                         <td class="col rowheader header" data-col="1" rowspan="2">&nbsp;</td>
                         <td class="col header name" data-col="2" rowspan="2">Names</td>
                         <td class="col header position" data-col="3" rowspan="2">Position</td>
-                        <td class="col header shift" data-col="4"><span class="longname">Wednesday</span><span class="shortname">Wed</span></td>
-                        <td class="col header shift" data-col="5"><span class="longname">Thursday</span><span class="shortname">Thu</span></td>
-                        <td class="col header shift" data-col="6"><span class="longname">Friday</span><span class="shortname">Fri</span></td>
-                        <td class="col header shift" data-col="7"><span class="longname">Saturday</span><span class="shortname">Sat</span></td>
-                        <td class="col header shift" data-col="8"><span class="longname">Sunday</span><span class="shortname">Sun</span></td>
-                        <td class="col header shift" data-col="9"><span class="longname">Monday</span><span class="shortname">Mon</span></td>
-                        <td class="col header shift" data-col="10"><span class="longname">Tuesday</span><span class="shortname">Tue</span></td>
+                        <td class="col header shift" data-col="4"><span class="longname">{{displayDayNameLong(1)}}</span><span class="shortname">{{displayDayNameShort(1)}}</span></td>
+                        <td class="col header shift" data-col="5"><span class="longname">{{displayDayNameLong(2)}}</span><span class="shortname">{{displayDayNameShort(2)}}</span></td>
+                        <td class="col header shift" data-col="6"><span class="longname">{{displayDayNameLong(3)}}</span><span class="shortname">{{displayDayNameShort(3)}}</span></td>
+                        <td class="col header shift" data-col="7"><span class="longname">{{displayDayNameLong(4)}}</span><span class="shortname">{{displayDayNameShort(4)}}</span></td>
+                        <td class="col header shift" data-col="8"><span class="longname">{{displayDayNameLong(5)}}</span><span class="shortname">{{displayDayNameShort(5)}}</span></td>
+                        <td class="col header shift" data-col="9"><span class="longname">{{displayDayNameLong(6)}}</span><span class="shortname">{{displayDayNameShort(6)}}</span></td>
+                        <td class="col header shift" data-col="10"><span class="longname">{{displayDayNameLong(7)}}</span><span class="shortname">{{displayDayNameShort(7)}}</span></td>
                         <td class="col header hours" data-col="11" rowspan="2">Hours</td>
                     </tr>
                     <tr class="secondary" data-row="0">
