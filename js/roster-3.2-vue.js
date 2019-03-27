@@ -1057,77 +1057,6 @@ let rostersection = {
     }
 }
 
-let selectemployee = {
-    props: ['deletedemployees', 'otheremployees'],
-    data: function() {
-        return {
-            searchText: '',
-            selectedEmployee: null
-        }
-    },
-    template: `<div id="selectemployee-dialog" class="modal fade" tabindex=-1 role="dialog">
-                    <div class="modal-dialog" role="document">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                <h4 class="modal-title">Select an employee</h4>
-                                <h5 class="modal-title">Double click to select</h5>
-                            </div>
-                            <div class="modal-body">
-                                <div class="form-group">
-                                    <input type="text" v-model="searchText">
-                                    <ul>
-                                        <li 
-                                            class="local"
-                                            v-for="employee in deletedemployees" 
-                                            v-if="deletedemployees.length > 0"
-                                            v-show="matchesSearch(employee)"
-                                            v-on:dblclick="employeeDblClicked(employee)">{{fullnameandnumber(employee)}}</li>
-                                        <li 
-                                            v-for="other in otheremployees"
-                                            v-if="otheremployees.length > 0"
-                                            v-show="matchesSearch(other)"
-                                            v-on:dblclick="visitingEmployeeDblClicked(other)">{{fullnamenumberandposition(other)}}</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                            </div>
-                        </div>
-                    </div>
-               </div>`,
-    methods: {
-        fullname: function(employee) {
-            return `${employee.emp_fname} ${employee.emp_lname}`;
-        },
-        fullnameandnumber: function(employee) {
-            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no})`;
-        },
-        fullnamenumberandposition: function(employee) {
-            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no}) (${employee.defaultPosition})`;
-        },
-        matchesSearch: function(employee) {
-            let fullname = this.fullname(employee);
-            return fullname.toLowerCase().includes(this.searchText.toLowerCase());
-        },
-        employeeDblClicked: function(employee) {
-            //console.log(`employee double clicked ${employee.emp_no}`);
-            this.selectedEmployee = employee;
-            this.emitEmployeeSelected(employee);
-        },
-        visitingEmployeeDblClicked: function(employee) {
-            //console.log(`visiting employee double clicked ${employee.emp_no}`);
-            employee.visitor = true;
-            this.employeeDblClicked(employee);
-        },
-        emitEmployeeSelected: function(employee) {
-            this.searchText = '';
-            this.$emit('employee-selected', employee);
-        }
-     }
-}
-
 let timeentry = {
     props: {
         value: String,
@@ -1510,7 +1439,8 @@ let genericdialog = {
     props: {
         showCancel: Boolean,
         handle: String,
-        title: String
+        title: String,
+        secondarytitle: String
     },
     template: `<div v-bind:id="handle" class="modal fade" tabindex=-1 role="dialog">
                 <div class="modal-dialog" role="document">
@@ -1518,17 +1448,160 @@ let genericdialog = {
                         <div class="modal-header">
                             <button v-if="showCancel" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                             <h4 class="modal-title">{{title}}</h4>
+                            <h5 class="modal-title">{{secondarytitle}}</h5>
                         </div>
                         <div class="modal-body">
                             <slot name="body">Default Value</slot>
                         </div>
                         <div class="modal-footer">
                             <button v-if="showCancel" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                            <slot name="btn_ok">Default Button Value</slot>
+                            <slot name="btn_ok"></slot>
                         </div>
                     </div>
                 </div>
             </div>`
+}
+
+let selectiondialog = {
+    props: {
+        showCancel: Boolean,
+        handle: String,
+        title: String,
+        secondarytitle: String
+    },
+    data: function() {
+        return {
+            searchText: ''
+        }
+    },
+    components: {
+        'genericdialog' : genericdialog
+    },
+    template: `<genericdialog
+                    class="selectsearch-dialog"
+                    :handle="handle"
+                    :title="title"
+                    :secondarytitle="secondarytitle"
+                    :show-cancel="showCancel">
+                        <template slot="body">
+                            <input type="text" v-model="searchText" v-on:input="$emit('input',searchText)">
+                            <ul>
+                                <slot name="elements"></slot>
+                            </ul>
+                        </template>
+                </genericdialog>`
+}
+
+let selectemployee = {
+    props: ['deletedemployees', 'otheremployees'],
+    data: function() {
+        return {
+            searchText: '',
+            selectedEmployee: null
+        }
+    },
+    components: {
+        'selectiondialog' : selectiondialog
+    },
+    template: `<selectiondialog
+                    handle="selectemployee-dialog"
+                    title="Select an employee"
+                    secondarytitle="Double click to selct"
+                    show-cancel
+                    v-on:input="searchTextChanged">
+                    <template slot="elements">
+                        <li 
+                            class="local"
+                            v-for="employee in deletedemployees" 
+                            v-if="deletedemployees.length > 0"
+                            v-show="matchesSearch(employee)"
+                            v-on:dblclick="employeeDblClicked(employee)">{{fullnameandnumber(employee)}}</li>
+                        <li 
+                            v-for="other in otheremployees"
+                            v-if="otheremployees.length > 0"
+                            v-show="matchesSearch(other)"
+                            v-on:dblclick="visitingEmployeeDblClicked(other)">{{fullnamenumberandposition(other)}}</li>
+                    </template>
+                </selectiondialog>`,
+    methods: {
+        searchTextChanged: function(searchtext) {
+            //console.log(`New search text ${searchtext}`);
+            this.searchText = searchtext;
+        },
+        fullname: function(employee) {
+            return `${employee.emp_fname} ${employee.emp_lname}`;
+        },
+        fullnameandnumber: function(employee) {
+            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no})`;
+        },
+        fullnamenumberandposition: function(employee) {
+            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no}) (${employee.defaultPosition})`;
+        },
+        matchesSearch: function(employee) {
+            let fullname = this.fullname(employee);
+            return fullname.toLowerCase().includes(this.searchText.toLowerCase());
+        },
+        employeeDblClicked: function(employee) {
+            //console.log(`employee double clicked ${employee.emp_no}`);
+            this.selectedEmployee = employee;
+            this.emitEmployeeSelected(employee);
+        },
+        visitingEmployeeDblClicked: function(employee) {
+            //console.log(`visiting employee double clicked ${employee.emp_no}`);
+            employee.visitor = true;
+            this.employeeDblClicked(employee);
+        },
+        emitEmployeeSelected: function(employee) {
+            this.searchText = '';
+            this.$emit('employee-selected', employee);
+        }
+     }
+}
+
+let copyfromroster = {
+    props: [approvedrosters],
+    data: function() {
+        return {
+            searchText: ''
+        }
+    },
+    components: {
+        'selectiondialog' : selectiondialog
+    },
+    template: `<selectiondialog
+                    handle="selectroster-dialog"
+                    title="Select a week to copy the roster from"
+                    secondarytitle="Double click to selct"
+                    show-cancel
+                    v-on:input="searchTextChanged">
+                    <template slot="elements">
+                        <template v-if="approvedrosters.length > 0"
+                            <li
+                                v-for="roster in approvedrosters"
+                                v-show="matchesSearch(roster)"
+                                v-on:dblclick="rosterSelected(roster)">{{displayWeek(roster)}}</li>
+                        </template>
+                        <template v-else>
+                            <p>There are no approved rosters to copy from</p>
+                        </template>
+                    </template>
+                </selectiondialog>`,
+    methods: {
+        searchTextChanged: function(searchtext) {
+            //console.log(`New search text ${searchtext}`);
+            this.searchText = searchtext;
+        },
+        matchesSearch: function(roster) {
+            let display = this.displayWeek(roster);
+            return display.toLowerCase().includes(this.searchText.toLowerCase());
+        },
+        displayWeek: function(roster) {
+            return moment(roster.weekending, 'YYYY-MM-DD').format('dddd MMM D, YYYY');;
+        },
+        rosterSelected: function(roster) {
+            $emit('copyfromweekending', roster);
+        }
+    }
 }
 
 const app = new Vue({
@@ -1573,7 +1646,8 @@ const app = new Vue({
         highlight: {
             start: null,
             end: null
-        }
+        },
+        approvedrosters: []
         // additionalhours: 0
     },
     components: {
@@ -1581,7 +1655,9 @@ const app = new Vue({
         'selectemployee' : selectemployee,
         'shiftentry' : shiftentry,
         'datepicker' : vuejsDatepicker,
-        'genericdialog' : genericdialog
+        'genericdialog' : genericdialog,
+        'selectiondialog' : selectiondialog,
+        'copyfromroster' : copyfromroster
     },
     watch: {
         locations: function() {
@@ -1606,7 +1682,7 @@ const app = new Vue({
                 showStartupModal();
             }  
         },
-        location: function(newval, oldval){
+        location: function(newval){
             if (newval) {
                 this.loadPositionQualifiers();
                 this.loadRoster();
@@ -1619,6 +1695,7 @@ const app = new Vue({
                 this.loadLocationsQualifiers();
                 this.loadExcuseCodes();
                 this.loadShortcuts();
+                this.loadApprovedRosters();
                 document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
             }
         },
@@ -1905,8 +1982,11 @@ const app = new Vue({
                 }
             })
         },
-        loadRosterSchedules: function() {
+        loadRosterSchedules: function(copyfrom) {
             let url = `getrosterschedules.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            if (copyfrom) {
+                url = `getrosterschedules.php?locID=${this.location.locID}&weekstarting=${this.copyfrom.format('YYYY-MM-DD')}&copyto=${this.weekstarting.format('YYYY-MM-DD')}`;
+            }
             fetch(url)
             .then(response => response.json())
             .then(results => {
@@ -1931,8 +2011,19 @@ const app = new Vue({
                 data.shortcuts = results;
             })
         },
-        saveRoster: function() {
+        loadApprovedRosters: function() {
+            let url = `getapprovedrosters.php?locID=${location.locID}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(results => {
+                this.approvedrosters = results;
+            });
+        },
+        saveRoster: function(exportToAcumen = false) {
             let url = `saveroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            if (exportToAcumen) {
+                url = url + `&exporttoacumen=1`;
+            }
             fetch(url)
             .then(response => response.json())
             .then(result => {
@@ -2054,7 +2145,7 @@ const app = new Vue({
             // .then(response => response.json())
             .catch(error => console.error(`Failed to delete Working Schedule`, error));
         },
-        deleteSchedules: function(onSuccess) {
+        deleteSchedules: function() {
             let promises = [];
             for(let employee of this.employees) {
                 for(let schedule of employee.schedules) {
@@ -2100,7 +2191,7 @@ const app = new Vue({
             }
         },
         exportToAcumen: function() {
-            this.saveRoster(); //save roster
+            this.saveRoster(true); //save roster
             let promises = this.deleteSchedules(); //delete all existing working schedules
             Promise.all(promises)
             .then(this.insertSchedules());
@@ -2112,12 +2203,34 @@ const app = new Vue({
                 this.exportToAcumen();
             }
         },
+        menuoption_copyFrom: function() {
+            /* This cannot be done if the roster has been approved or exported to acumen*/
+            /* confirm with user that any existing shifts will be deleted */
+            $(this.$refs.deleteSchedulesDialog.$el).modal('show');
+        },
+        copyFromRoster: function(roster) {
+            $(this.refs.copyfromrosterDialog.$el).modal('hide');
+            //delete all existing schedules
+            this.createEmployeeSchedules();
+            let copyfrom = new moment(roster.weekstarting, 'YYYY-MM-DD');
+            this.loadRosterSchedules(copyfrom);
+        },
+        deleteSchedulesOKClicked: function() {
+            $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
+            $(this.refs.copyfromrosterDialog.$el).modal('show');
+        },
+        menuoption_changeLocation: function(locID) {
+            console.log(`Change location to ${locID}`);
+        },
         missingCellsModalOKClicked: function() {
             $(this.$refs.missingCellsDialog.$el).modal('hide');
             this.exportToAcumen();
         },
         menuoption_print: function() {
             window.print();
+        },
+        menuoption_test: function(value) {
+            console.log(`Value passed is: ${value}`);
         },
         getPComment: function(code) {
             if (this.excusecodes) {

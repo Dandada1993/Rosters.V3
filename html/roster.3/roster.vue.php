@@ -13,6 +13,7 @@
     <link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="/css/jquery.timepicker.min.css" />
     <link rel="stylesheet" type="text/css" href="/css/bootstrap-datepicker.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/bootstrap-3-submenu.css">
     <link rel="stylesheet" type="text/css" href="/css/roster-3.0.css">
 </head>
 <body>
@@ -30,18 +31,54 @@
                 <div class="collapse navbar-collapse">
                     <ul class="nav navbar-nav">
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">File
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Roster
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="#" v-on:click="save">Save</a></li>
-                                <li><a href="#">Change End Date</a></li>
+                                <template v-if="roster">
+                                    <li :disabled="roster.exportedToAcumen" v-on:click="menuoption_copyFrom"><a >Copy From</a></li>
+                                </template>
+                                <li><a v-on:click="save">Save</a></li>
                                 <li class="divider"></li>
-                                <li><a href="#" v-on:click="menuoption_print">Print</a></li>
-                                <li><a href="#">Send for Approval</a></li>
-                                <li><a href="#">Approve</a></li>
+                                <li><a v-on:click="menuoption_print">Print</a></li>
+                                <li><a >Send for Approval</a></li>
+                                <li><a >Approve</a></li>
                                 <li class="divider"></li>
-                                <li><a href="#" v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
+                                <li><a v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
+                                <!-- <li><a v-on:click="menuoption_test(location.locID)">Test</a></li> -->
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Shifts
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a >Cut</a></li>
+                                <li><a >Copy</a></li>
+                                <li><a >Paste</a></li>
+                                <li class="divider"></li>
+                                <li v-if="locations" class="dropdown-submenu">
+                                    <a tabindex="-1" >Set Location</a>
+                                    <ul class="dropdown-menu">
+                                        <li v-for="loc in locations" v-if="loc.type === 'R'"><a v-on:click="menuoption_changeLocation(loc.locID)">{{loc.name}}</a></li>
+                                    </ul>
+                                </li>
+                                <li class="dropdown-submenu">
+                                    <a tabindex="-1" >Set Position</a>
+                                    <ul class="dropdown-menu">
+                                        <li ><a >Cashier</a></li>
+                                        <li ><a >Front Counter</a></li>
+                                        <li ><a >Preparation</a></li>
+                                    </ul>
+                                </li>
+                                <li class="dropdown-submenu">
+                                    <a tabindex="-1" >Set Excuse Code</a>
+                                    <ul class="dropdown-menu">
+                                        <li ><a >Suspension</a></li>
+                                        <li ><a >Vacation</a></li>
+                                        <li ><a >Injury Leave</a></li>
+                                    </ul>
+                                </li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -49,8 +86,8 @@
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="#">Documentation</a></li>
-                                <li><a href="#">Tips and Tricks</a></li>
+                                <li><a >Documentation</a></li>
+                                <li><a >Tips and Tricks</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -208,17 +245,32 @@
             :locationsqualifiers="locationsqualifiers"
             v-on:hours-updated="hoursUpdated()"
         ></div>
+        <div is="copyfromroster"
+            ref="copyfromrosterDialog"
+            :approvedrosters="approvedrosters"
+            v-on:copyfromweekending="copyFromRoster">
+        </div>
+        <div ref="deleteSchedulesDialog" 
+            is="genericdialog"
+            show-cancel
+            handle="delete-schedules"
+            title="Existings shifts will be deleted">
+            <template slot="body">
+                <div class="form-group">
+                    <p >All existing shifts will be deleted.</p>
+                    <p>Are you sure you want to continue?</p>
+                </div>
+            </template>
+            <template slot="btn_ok">
+                <button type="button" class="btn btn-primary" v-on:click="deleteSchedulesOKClicked">Proceed</button>
+            </template>
+        </div>
         <ul ref="contextMenu" id="contextMenu" class="dropdown-menu" role="menu" style="display:none" >
             <li><a tabindex="-1" href="#">Cut</a></li>
             <li><a tabindex="-1" href="#">Copy</a></li>
             <li :class="{'contextmenu-disabled' : clipboardEmpty()}"><a tabindex="-1" href="#" >Paste</a></li>
             <li class="divider"></li>
             <li class="dropdown-header">EXCUSE CODES</li>
-            <!-- <li><a tabindex="-1" href="#">OFF</a></li>
-            <li><a tabindex="-1" href="#">OFF(R)</a></li>
-            <li><a tabindex="-1" href="#">SL</a></li>
-            <li><a tabindex="-1" href="#">IL</a></li>
-            <li><a tabindex="-1" href="#">VAC</a></li> -->
             <li v-for="excuse in excusecodes" v-if="excusecodes"><a tabindex="-1" href="#">{{excuse.code}}</a></li>
         </ul>
     </div>

@@ -77,6 +77,17 @@ When shift cut and pasted the location and default position are not showing in t
 
 Need to add position to list of employees
 
+Roster\Change end date
+Roster\Delete all shifts (needs confirmation)
+Shifts\Cut
+Shifts\Copy
+Shifts\Paste
+Shifts\Change location\<list locations>
+Shifts\Change qualifier
+Shifts\Change position
+Shifts\Excuse code\<list excuse codes>
+
+
 
 Algorithm for Saving Roster
 ===========================

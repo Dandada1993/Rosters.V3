@@ -164,7 +164,7 @@ td.position {
     outline: 0;
 }
 
-#selectemployee-dialog input {
+.selectsearch-dialog input { /*#selectemployee-dialog input {*/
     width: 100%;
     height: 40px;
     font-size: 16px;
@@ -176,7 +176,7 @@ td.position {
     border: 1px solid #95A5A6;
 }
 
-#selectemployee-dialog ul {
+.selectsearch-dialog ul { /*#selectemployee-dialog ul {*/
     height: 200px;
     overflow: scroll;
     overflow-x: hidden;
@@ -187,7 +187,7 @@ td.position {
     margin-top: -1px;
 }
 
-#selectemployee-dialog li {
+.selectsearch-dialog li { /*#selectemployee-dialog li {*/
     border: 1px solid #ddd;
     margin-top: -1px; /* Prevent double borders */
     background-color: #f6f6f6;
@@ -198,7 +198,7 @@ td.position {
     display: block;
 }
 
-#selectemployee-dialog li:active {
+.selectsearch-dialog li:active { /*#selectemployee-dialog li:active {*/
     background-color: #ABB2B9;
 }
 
