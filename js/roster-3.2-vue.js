@@ -286,8 +286,8 @@ function Shift(date, shift = '') {
     this.hours = function(){
         if (this.starttime && this.endtime) {
             let minutes = this.endtime.diff(this.starttime, 'minutes');
-            if (minutes > 240) {
-                minutes -= 30;
+            if (minutes > parseInt(data.location.minimumforbreak)) {
+                minutes -= parseInt(data.location.breaklength);
             }
             return minutes/60;
         }
@@ -581,6 +581,18 @@ function Schedule(date) {
         }
         return true;
     }
+
+    this.changeLocation = function(newvalue) {
+        if (!this.isEmpty()) {
+            if (this.firstShift) {
+                this.firstShift.location = newvalue;
+            }
+            if (this.secondShift) {
+                this.secondShift.location = newvalue;
+            }
+            this.format('short');
+        }
+    }
 }
 
 let rostershift = {
@@ -590,7 +602,7 @@ let rostershift = {
                 class="shift-input"  
                 :class="{missing :isEmpty, invalid :!isValid, highlight :highlighted}"
                 v-model="schedule.shiftstring"
-                v-on:focusin="$emit('focusin')" 
+                v-on:focusin="handleFocusIn" 
                 v-on:focusout="$emit('focusout')"   
                 v-on:change="valueChanged()"
                 v-on:keyup.enter="valueChanged()"
@@ -694,6 +706,10 @@ let rostershift = {
             //console.log('Arrow right pressed');
             EventBus.$emit('ARROW-UP', {row: this.row, column: this.col});
         },
+        handleFocusIn: function(event) {
+            this.$emit('focusin');
+            EventBus.$emit('TOOK-FOCUS', {row: this.row, column: this.col});
+        },
         cut: function() {
             let copyText = this.$el; 
             copyText.select();
@@ -738,7 +754,7 @@ let rostershift = {
         onHighlightCell: function(cell) {
             //let row = this.$parent.$el.getAttribute('data-row');
             //let col = this.$parent.$el.getAttribute('data-col');
-            if (row === cell.row && col === cell.column) {
+            if (this.row === cell.row && this.col === cell.column) {
                 //console.log(`highlighting row: ${row}, col: ${col}`);
                 this.highlighted = true;
             }
@@ -746,6 +762,12 @@ let rostershift = {
         onTakeFocus: function(cell) {
             if (cell.row === this.row && cell.column === this.col) {
                 this.$el.focus();
+                EventBus.$emit('TOOK-FOCUS', cell);
+            }
+        },
+        onChangeLocation: function(newlocation) {
+            if (this.highlighted || this.$parent.isActive) {
+                this.schedule.changeLocation(newlocation);
             }
         }
     },
@@ -762,12 +784,15 @@ let rostershift = {
                 this.performContextMenuAction(action);
             }
         });
-        EventBus.$on('HIGHTLIGHT-CELL', (cell) => {
+        EventBus.$on('HIGHLIGHT-CELL', (cell) => {
             this.onHighlightCell(cell);
         });
         EventBus.$on('TAKE-FOCUS', (cell) => {
             this.onTakeFocus(cell);
-        })
+        });
+        EventBus.$on('CHANGE-LOCATION', (newlocation) => {
+            this.onChangeLocation(newlocation);
+        });
     }
 }
 
@@ -780,7 +805,6 @@ let rostershiftcell = {
                     <rostershift 
                         :schedule="schedule"
                         v-on:focusin="isActive = true" 
-                        v-on:focusout="isActive = false"
                         v-on:cellchanged="emitUpdateHours"
                         v-on:enter-shifts="emitEnterShift">
                     </rostershift>
@@ -807,6 +831,12 @@ let rostershiftcell = {
             if (this.schedule.secondShift) {
                 return this.schedule.secondShift.format('short');
             }
+        },
+        row: function() {
+            return parseInt(this.$el.getAttribute('data-row'));
+        },
+        col: function() {
+            return parseInt(this.$el.getAttribute('data-col'));
         }
     },
     methods: {
@@ -815,7 +845,17 @@ let rostershiftcell = {
         },
         emitUpdateHours: function() {
             this.$emit('update-hours');
+        },
+        onTookFocus: function(cell) {
+            if (cell.row !== this.row || cell.column !== this.col) {
+                this.isActive = false;
+            }
         }
+    },
+    mounted: function() {
+        EventBus.$on('TOOK-FOCUS', (cell) => {
+            this.onTookFocus(cell);
+        })
     }
 }
 
@@ -928,9 +968,9 @@ let rosterslot = {
             if (this.hours === 0) {
                 return true;
             } else {
-                let target = 28;
+                let target = parseInt(data.location.minimumhours);
                 if (this.isGradeA) {
-                    target = 36;
+                    target = parseInt(data.location.maximumhours);
                 }
                 if (this.hours < target) {
                     return false;
@@ -1439,6 +1479,15 @@ let shiftentry = {
     }
 }
 
+// let okbutton = {
+//     template: `<button type="button" class="btn btn-primary" v-on:click="handleClick">Proceed</button>`,
+//     methods: {
+//         handleClick: function() {
+//             this.$emit('click');
+//         }
+//     }
+// }
+
 let genericdialog = {
     props: {
         showCancel: Boolean,
@@ -1446,6 +1495,9 @@ let genericdialog = {
         title: String,
         secondarytitle: String
     },
+    // components: {
+    //     'okbutton' : okbutton
+    // },
     template: `<div v-bind:id="handle" class="modal fade" tabindex=-1 role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -1603,7 +1655,8 @@ let copyfromroster = {
             return moment(roster.weekending, 'YYYY-MM-DD').format('dddd MMM D, YYYY');;
         },
         rosterSelected: function(roster) {
-            $emit('copyfromweekending', roster);
+            //console.log('Entry double clicked');
+            this.$emit('copyfromweekending', roster);
         }
     }
 }
@@ -1996,16 +2049,23 @@ const app = new Vue({
                 }
             })
         },
-        loadRosterSchedules: function(copyfrom) {
+        loadRosterSchedules: function() {
             let url = `getrosterschedules.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            if (copyfrom) {
-                url = `getrosterschedules.php?locID=${this.location.locID}&weekstarting=${this.copyfrom.format('YYYY-MM-DD')}&copyto=${this.weekstarting.format('YYYY-MM-DD')}`;
-            }
             fetch(url)
             .then(response => response.json())
             .then(results => {
                 if (results) {
                     this.savedschedules = results;
+                }
+            })
+        },
+        loadRosterSchedulesFromCopy: function(copyfrom) {
+            url = `getrosterschedules.php?locID=${this.location.locID}&weekstarting=${copyfrom.format('YYYY-MM-DD')}&copyto=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(results => {
+                if (results) {
+                    this.updateSchedules(results);
                 }
             })
         },
@@ -2026,7 +2086,7 @@ const app = new Vue({
             })
         },
         loadApprovedRosters: function() {
-            let url = `getapprovedrosters.php?locID=${location.locID}`;
+            let url = `getapprovedrosters.php?locID=${this.location.locID}`;
             fetch(url)
             .then(response => response.json())
             .then(results => {
@@ -2220,21 +2280,58 @@ const app = new Vue({
         menuoption_copyFrom: function() {
             /* This cannot be done if the roster has been approved or exported to acumen*/
             /* confirm with user that any existing shifts will be deleted */
+            // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.showCopyFromModal);
+            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.showCopyFromModal);
             $(this.$refs.deleteSchedulesDialog.$el).modal('show');
         },
+        showCopyFromModal: function() {
+            $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
+            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
+            $(this.$refs.copyfromrosterDialog.$el).modal('show');
+        },
         copyFromRoster: function(roster) {
-            $(this.refs.copyfromrosterDialog.$el).modal('hide');
+            $(this.$refs.copyfromrosterDialog.$el).modal('hide');
             //delete all existing schedules
-            this.createEmployeeSchedules();
+            this.removeSchedules();
             let copyfrom = new moment(roster.weekstarting, 'YYYY-MM-DD');
-            this.loadRosterSchedules(copyfrom);
+            this.loadRosterSchedulesFromCopy(copyfrom);
         },
         deleteSchedulesOKClicked: function() {
             $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
-            $(this.refs.copyfromrosterDialog.$el).modal('show');
+            //$(this.$refs.copyfromrosterDialog.$el).modal('show');
+        },
+        removeSchedules: function() {
+            for(let employee of this.employees) {
+                for(let schedule of employee.schedules) {
+                    if (schedule.shiftstring) {
+                        schedule.id = 0;
+                        schedule.shiftstring = '';
+                        schedule.setShifts();
+                        schedule.format('short');
+                        schedule.isDirty = true;
+                    }
+                }
+            };
+            this.emitScheduleUpdated();
+        },
+        updateSchedules: function(schedules) {
+            for(let savedschedule of schedules) {
+                let employee = this.findEmployeeByEmpNo(savedschedule.emp_no);
+                let scheduleindex = this.findScheduleIndexByWeekDate(savedschedule.date);
+                if (employee && scheduleindex !== null) {
+                    let schedule = employee.schedules[scheduleindex];
+                    schedule.id = 0;
+                    schedule.shiftstring = savedschedule.shiftstring;
+                    schedule.setShifts();
+                    schedule.format('short');
+                    schedule.isDirty = true;
+                }
+            };
+            this.emitScheduleUpdated();
         },
         menuoption_changeLocation: function(locID) {
-            console.log(`Change location to ${locID}`);
+            //console.log(`Change location to ${locID}`);
+            EventBus.$emit('CHANGE-LOCATION', locID);
         },
         missingCellsModalOKClicked: function() {
             $(this.$refs.missingCellsDialog.$el).modal('hide');
@@ -2245,6 +2342,16 @@ const app = new Vue({
         },
         menuoption_test: function(value) {
             console.log(`Value passed is: ${value}`);
+        },
+        menuoption_deleteAllShifts: function() {
+            // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.removeSchedules);
+            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.deleteAllShifts);
+            $(this.$refs.deleteSchedulesDialog.$el).modal('show');
+        },
+        deleteAllShifts: function() {
+            $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
+            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
+            this.removeSchedules();
         },
         getPComment: function(code) {
             if (this.excusecodes) {
@@ -2277,6 +2384,7 @@ const app = new Vue({
         setLocation: function() {
             if (this.locID && this.weekending) {
                 this.location = this.getLocation(this.locID);
+                data.location = this.location;
             }
         },
         getLocation: function(locid) {
@@ -2397,7 +2505,7 @@ const app = new Vue({
                 for(let i = rowRange.smaller; i <= rowRange.larger; i++) {
                     for (let j = colRange.smaller; j <= colRange.larger; j++) {
                         //console.log(`Emit for row: ${i}, column: ${j}`);
-                        EventBus.$emit('HIGHTLIGHT-CELL', {row: i, column: j});
+                        EventBus.$emit('HIGHLIGHT-CELL', {row: i, column: j});
                     }
                 }
             }

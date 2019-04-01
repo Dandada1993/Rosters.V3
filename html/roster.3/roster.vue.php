@@ -26,18 +26,18 @@
         <nav class="navbar navbar-default">
             <div class="container-fluid">
                 <div class="navbar-header">
-                    <a class="navbar-brand" href="#">Roster Manager</a>
+                    <a class="navbar-brand">Roster Manager</a>
                 </div>
                 <div class="collapse navbar-collapse">
                     <ul class="nav navbar-nav">
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Roster
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Roster
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <template v-if="roster">
-                                    <li :disabled="roster.exportedToAcumen" v-on:click="menuoption_copyFrom"><a >Copy From</a></li>
-                                </template>
+                                <!-- <template v-if="roster"> -->
+                                <li :disabled="!roster || roster.exportedToAcumen === '1'" v-on:click="menuoption_copyFrom"><a >Copy From</a></li>
+                                <!-- </template> -->
                                 <li><a v-on:click="save">Save</a></li>
                                 <li class="divider"></li>
                                 <li><a v-on:click="menuoption_print">Print</a></li>
@@ -49,13 +49,15 @@
                             </ul>
                         </li>
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Shifts
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Shifts
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a >Cut</a></li>
                                 <li><a >Copy</a></li>
                                 <li><a >Paste</a></li>
+                                <li class="divider"></li>
+                                <li><a v-on:click="menuoption_deleteAllShifts">Delete All</a></li>
                                 <li class="divider"></li>
                                 <li v-if="locations" class="dropdown-submenu">
                                     <a tabindex="-1" >Set Location</a>
@@ -82,7 +84,7 @@
                             </ul>
                         </li>
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Help
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Help
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
@@ -262,16 +264,16 @@
                 </div>
             </template>
             <template slot="btn_ok">
-                <button type="button" class="btn btn-primary" v-on:click="deleteSchedulesOKClicked">Proceed</button>
+                <button id="okbutton" type="button" class="btn btn-primary">Proceed</button>
             </template>
         </div>
         <ul ref="contextMenu" id="contextMenu" class="dropdown-menu" role="menu" style="display:none" >
-            <li><a tabindex="-1" href="#">Cut</a></li>
-            <li><a tabindex="-1" href="#">Copy</a></li>
-            <li :class="{'contextmenu-disabled' : clipboardEmpty()}"><a tabindex="-1" href="#" >Paste</a></li>
+            <li><a tabindex="-1">Cut</a></li>
+            <li><a tabindex="-1">Copy</a></li>
+            <li :class="{'contextmenu-disabled' : clipboardEmpty()}"><a tabindex="-1">Paste</a></li>
             <li class="divider"></li>
             <li class="dropdown-header">EXCUSE CODES</li>
-            <li v-for="excuse in excusecodes" v-if="excusecodes"><a tabindex="-1" href="#">{{excuse.code}}</a></li>
+            <li v-for="excuse in excusecodes" v-if="excusecodes"><a tabindex="-1">{{excuse.code}}</a></li>
         </ul>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>

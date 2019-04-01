@@ -34,11 +34,9 @@ Implement multicell cut, copy and paste
 
 Implement Tooltip for cells when text is too long and for cells with errors.
 
-Highlight shifts shorter than x hours and longer than y hours. Have x and y configurable by location.
+Highlight shifts shorter than x hours and longer than y hours. Have x and y configurable by location (x & y have been defined and configured in database)
 
-When changing weekending date shown location/weekending dialog with location disabled so that only the weekending can be changed.
-
-Account for Grade A and Grade B hours and maybe show hours as invalid when the respective miniumums are not met (done. The 28 & 36 hours limits are hardcoded)
+Account for Grade A and Grade B hours and maybe show hours as invalid when the respective miniumums are not met (done)
 
 Need to handle situation where part of employee shift is entered on one roster and part of employee shift is entered on another roster (employee might be shared between branches).
 
@@ -48,11 +46,11 @@ Need to have ability to print roster
 
 Add Confirmation dialog when Exporting to Acumen (done)
 
-Add ability to change week ending. This can be used to copy a roster e.g. recall roster for previous week, change date and save. However, situation may arise were an incorrect week (in the future) is chosen. Schedules are entered and saved and then the error is realised. If the weekending is changed to a week in the past first check and ensure that schedules have not been entered nor exported for that week, then prompt the user to ask if the saved scheduled for the 'wrong' weekending should be deleted.
+Add ability to change week ending. This can be used to copy a roster e.g. recall roster for previous week, change date and save. However, situation may arise were an incorrect week (in the future) is chosen. Schedules are entered and saved and then the error is realised. If the weekending is changed to a week in the past first check and ensure that schedules have not been entered nor exported for that week, then prompt the user to ask if the saved scheduled for the 'wrong' weekending should be deleted. (done to be tested)
 
-Implement generic dialog for export to acumen confirmation and deleting shifts on change week 
+Implement generic dialog for export to acumen confirmation and deleting shifts on change week (done).
 
-Add flag which indicates that the roster has been exported to Acumen and a date time stamp when exported.
+Add flag which indicates that the roster has been exported to Acumen and a date time stamp when exported. (done)
 
 Disable the Export to Acumen option if the roster has been exported previously and not saved subsequently or there are no dirty cells.
 
@@ -61,7 +59,7 @@ Add dates to the roster header below the day labels (done)
 Maintenance
 	Add mechanism where D & N can be entered and replaced with 830a-5p and 130p-10p automatically (done)
 	Need to be able to assign maintenance to a branch. If this not currently working as position are resticted to non-maintenance positions. (done)
-	Need to be able to identify persons with an without vehicles.
+	Need to be able to identify persons with and without vehicles.
 
 Make positions in position regular expression dynamic
 
@@ -71,13 +69,18 @@ Highlight visiting employees when flag is set in LocationsDef
 
 Add additional menu options e.g. setting location on highlighted cells
 
+Pull Excuse Codes from PayExceptions when initially loading the roster.
+
+Make weekstart/weekend variable (done)
+
 Issues:
 =======
 When shift cut and pasted the location and default position are not showing in the shift dialog (fixed)
 
 Need to add position to list of employees
 
-Roster\Change end date
+Add the following menu options
+Roster\Copy from (provide a dialog of weeks with saved rosters)
 Roster\Delete all shifts (needs confirmation)
 Shifts\Cut
 Shifts\Copy
@@ -87,7 +90,11 @@ Shifts\Change qualifier
 Shifts\Change position
 Shifts\Excuse code\<list excuse codes>
 
+Shortcuts\Manage - allow managers to add shortcuts
 
+Copy From is hidden when roster has not been saved (fixed).
+
+Maintenance shifts with a location specified do not seem to export to Acumen.
 
 Algorithm for Saving Roster
 ===========================
