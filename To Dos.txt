@@ -67,7 +67,7 @@ Highlight shifts not at currently location i.e. loaned employees when flag is se
 
 Highlight visiting employees when flag is set in LocationsDef
 
-Add additional menu options e.g. setting location on highlighted cells
+Add additional menu options e.g. setting location on highlighted cells (done)
 
 Pull Excuse Codes from PayExceptions when initially loading the roster.
 
@@ -75,7 +75,11 @@ Make weekstart/weekend variable (done)
 
 Make the break time variable (done).
 
-Add option to delete all schedules
+Add option to delete all schedules (done)
+
+Hide the Send For Approval and Appove options is the autoapprove is set to 1. (done)
+
+Add the ability for custom shortcuts to be added.
 
 Issues:
 =======
@@ -100,7 +104,7 @@ Copy From is hidden when roster has not been saved (fixed).
 
 Maintenance shifts with a location specified do not seem to export to Acumen (was not an issue. database query used to verify the inserts was incorrect)
 
-Finish the functionality for Change position. The position include the qualifier so need to account for that.
+Finish the functionality for Change position. The position include the qualifier so need to account for that. (completed)
 
 Algorithm for Saving Roster
 ===========================

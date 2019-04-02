@@ -77,9 +77,9 @@ const EventBus = new Vue();
 //     });
 // }
 
-// $(function () {
- 
-// });
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip();
+});
 
 function showStartupModal() {
     $('#selectLocations-dialog').modal({
@@ -563,7 +563,10 @@ function Schedule(date) {
     this.hours = function() {
         var retval = 0;
         if (Validator.isTimes(this.shiftstring)){
-            retval += this.firstShift.hours();
+            // this.setShifts();
+            if (this.firstShift) {
+                retval += this.firstShift.hours();
+            }
             if (this.secondShift) {
                 retval += this.secondShift.hours();
             }
@@ -611,11 +614,11 @@ function Schedule(date) {
 }
 
 let rostershift = {
-    props: ['schedule'],
+    props: ['schedule','employee'],
     template: `<input type="text"
                 spellcheck="false"
                 class="shift-input"  
-                :class="{missing :isEmpty, invalid :!isValid, highlight :highlighted}"
+                :class="{missing :isEmpty, invalid :!isValid, tooshort :isTooShort, highlight :highlighted, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong}"
                 v-model="schedule.shiftstring"
                 v-on:focusin="handleFocusIn" 
                 v-on:focusout="$emit('focusout')"   
@@ -627,7 +630,9 @@ let rostershift = {
                 v-on:keyup.arrow-right="handleArrowRight"
                 v-on:keyup.arrow-left="handleArrowLeft"
                 v-on:keyup.arrow-down="handleArrowDown"
-                v-on:keyup.arrow-up="handleArrowUp"/>`, 
+                v-on:keyup.arrow-up="handleArrowUp"
+                data-toggle="tooltip"
+                :title="title"/>`, 
     data: function() {
         return {
             highlighted: false
@@ -648,6 +653,53 @@ let rostershift = {
         },
         col: function() {
             return parseInt(this.$parent.$el.getAttribute('data-col'));
+        },
+        isTooLong: function() {
+            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > parseFloat(data.location.maximumshift)) {
+                return true;
+            }
+            return false;
+        },
+        isTooShort: function() {
+            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < parseFloat(data.location.minimumshift)) {
+                return true;
+            }
+            return false;
+        },
+        isOnLoan: function() {
+            if (data.location.showloanedemployees === '1') {
+                if (Validator.isTimes(this.schedule.shiftstring)
+                    && this.employee.defaultLocation.toUpperCase() === data.location.locID.toUpperCase() 
+                    && (this.schedule.firstShift && this.schedule.firstShift.location.toUpperCase() !== data.location.locID.toUpperCase() 
+                    || (this.schedule.secondShift && this.schedule.secondShift.location.toUpperCase() !== data.location.locID.toUpperCase()))) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        isVisiting: function() {
+            if (data.location.showvisitingemployees === '1') {
+                if (Validator.isTimes(this.schedule.shiftstring)
+                    && this.employee.defaultLocation.toUpperCase() !== data.location.locID.toUpperCase() 
+                    && (this.schedule.firstShift && this.schedule.firstShift.location.toUpperCase() === data.location.locID.toUpperCase() 
+                    || (this.schedule.secondShift && this.schedule.secondShift.location.toUpperCase() === data.location.locID.toUpperCase()))) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        title: function() {
+            let result = '';
+            if (this.isEmpty) {
+                result = '';
+            } else if (!Validator.isExcuse(this.schedule.shiftstring) && !Validator.validShifts(this.schedule.shiftstring)) {
+                result = 'Invalid shift';
+            } else if (this.isTooShort) {
+                result = `Shift is shorter than ${data.location.minimumshift} hours`;
+            } else if (this.isTooLong) {
+                result = `Shift is greater than ${data.location.maximumshift} hours`;
+            }
+            return result;
         }
     },
     methods: {
@@ -742,6 +794,18 @@ let rostershift = {
                 this.emitChanged();
             } 
         },
+        // tooShort: function() {
+        //     if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < parseFloat(data.location.minimumshift)) {
+        //         return true;
+        //     }
+        //     return false;
+        // },
+        // tooLong: function() {
+        //     if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > parseFloat(data.location.maximumshift)) {
+        //         return true;
+        //     }
+        //     return false;
+        // },
         onHighlightCell: function(cell) {
             if (this.row === cell.row && this.col === cell.column) {
                 this.highlighted = true;
@@ -803,13 +867,14 @@ let rostershift = {
 }
 
 let rostershiftcell = {
-    props: ['schedule'],
+    props: ['schedule', 'employee'],
     template: `<td 
                 ref="child"
                 class="col shift" 
                 :class="{active :isActive}" >
                     <rostershift 
                         :schedule="schedule"
+                        :employee="employee"
                         v-on:focusin="isActive = true" 
                         v-on:cellchanged="emitUpdateHours"
                         v-on:enter-shifts="emitEnterShift">
@@ -925,7 +990,7 @@ let rosterslot = {
                 </td>
                 <td 
                     class="col name" 
-                    :class="{invalid :nameNotSet, gradeA :isGradeA}"
+                    :class="{invalid :nameNotSet, gradeA :isGradeA, visiting :isVisiting}"
                     v-on:dblclick="$emit('select-employee', employeeindex)"
                 >{{fullname}}</td>
                 <positionselector tabindex="-1"
@@ -936,6 +1001,7 @@ let rosterslot = {
                 <rostershiftcell 
                     v-for="(schedule, index) in schedules" 
                     :schedule="schedule" 
+                    :employee="employee"
                     :key="index"
                     :data-row="employeeindex + 1"
                     :data-col="index + 1"
@@ -983,6 +1049,12 @@ let rosterslot = {
                 }
                 return true;
             }
+        },
+        isVisiting: function() {
+            if (this.employee.defaultLocation.toUpperCase() !== data.location.locID.toUpperCase()) {
+                return true;
+            }
+            return false;
         }
     },
     methods: {
@@ -2430,6 +2502,7 @@ const app = new Vue({
             this.employees[this.editEmployeeIndex].emp_no = employee.emp_no;
             this.employees[this.editEmployeeIndex].emp_fname = employee.emp_fname;
             this.employees[this.editEmployeeIndex].emp_lname = employee.emp_lname;
+            this.employees[this.editEmployeeIndex].defaultLocation = employee.defaultLocation;
             if (employee.visitor) {
                 this.employees[this.editEmployeeIndex].visitor = true;
                 this.removeEmployee(this.otheremployees, employee);

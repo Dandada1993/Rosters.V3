@@ -103,9 +103,27 @@ td.shift {
     background: #FEF9E7;
 }
 
-.invalid {
+.invalid,
+.tooshort {
     background: #dc3545; /* #F5B7B1; */
     color: white;
+}
+
+/* .tooshort {
+    background: pink;
+} */
+
+.toolong {
+    background: orange;
+}
+
+.onloan {
+    background: purple;
+    color: white;
+}
+
+.visiting {
+    background: #06F850;    
 }
 
 h4 {
