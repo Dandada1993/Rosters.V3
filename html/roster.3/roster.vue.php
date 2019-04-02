@@ -41,8 +41,10 @@
                                 <li><a v-on:click="save">Save</a></li>
                                 <li class="divider"></li>
                                 <li><a v-on:click="menuoption_print">Print</a></li>
-                                <li><a >Send for Approval</a></li>
-                                <li><a >Approve</a></li>
+                                <template v-if="location && location.autoApprove === '0'">
+                                    <li><a >Send for Approval</a></li>
+                                    <li><a >Approve</a></li>
+                                </template>
                                 <li class="divider"></li>
                                 <li><a v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
                                 <!-- <li><a v-on:click="menuoption_test(location.locID)">Test</a></li> -->
@@ -62,23 +64,23 @@
                                 <li v-if="locations" class="dropdown-submenu">
                                     <a tabindex="-1" >Set Location</a>
                                     <ul class="dropdown-menu">
-                                        <li v-for="loc in locations" v-if="loc.type === 'R'"><a v-on:click="menuoption_changeLocation(loc.locID)">{{loc.name}}</a></li>
+                                        <template v-if="location">
+                                            <li v-for="loc in locations" v-if="isValidRosteredAtLocation(loc)"><a v-on:click="menuoption_changeLocation(loc.locID)">{{loc.name}}</a></li>
+                                        </template>
                                     </ul>
                                 </li>
                                 <li class="dropdown-submenu">
                                     <a tabindex="-1" >Set Position</a>
                                     <ul class="dropdown-menu">
-                                        <li ><a >Cashier</a></li>
-                                        <li ><a >Front Counter</a></li>
-                                        <li ><a >Preparation</a></li>
+                                        <li v-for="position in positions"><a v-on:click="menuoption_changePosition(position)">{{position}}</a></li>
                                     </ul>
                                 </li>
                                 <li class="dropdown-submenu">
                                     <a tabindex="-1" >Set Excuse Code</a>
                                     <ul class="dropdown-menu">
-                                        <li ><a >Suspension</a></li>
-                                        <li ><a >Vacation</a></li>
-                                        <li ><a >Injury Leave</a></li>
+                                        <template v-if="excusecodes">
+                                        <li v-for="excuse in excusecodes" ><a v-on:click="menuoption_setExcuseCode(excuse.code)">{{excuse.name}}</a></li>
+                                        </template>
                                     </ul>
                                 </li>
                             </ul>

@@ -40,13 +40,13 @@ Account for Grade A and Grade B hours and maybe show hours as invalid when the r
 
 Need to handle situation where part of employee shift is entered on one roster and part of employee shift is entered on another roster (employee might be shared between branches).
 
-Need to have a read only version of the roster. Replace inputs with spans
+Need to have a read only version of the roster. Replace inputs with spans (done)
 
-Need to have ability to print roster
+Need to have ability to print roster (done)
 
 Add Confirmation dialog when Exporting to Acumen (done)
 
-Add ability to change week ending. This can be used to copy a roster e.g. recall roster for previous week, change date and save. However, situation may arise were an incorrect week (in the future) is chosen. Schedules are entered and saved and then the error is realised. If the weekending is changed to a week in the past first check and ensure that schedules have not been entered nor exported for that week, then prompt the user to ask if the saved scheduled for the 'wrong' weekending should be deleted. (done to be tested)
+Add ability to change week ending. This can be used to copy a roster e.g. recall roster for previous week, change date and save. However, situation may arise were an incorrect week (in the future) is chosen. Schedules are entered and saved and then the error is realised. If the weekending is changed to a week in the past first check and ensure that schedules have not been entered nor exported for that week, then prompt the user to ask if the saved scheduled for the 'wrong' weekending should be deleted. (done)
 
 Implement generic dialog for export to acumen confirmation and deleting shifts on change week (done).
 
@@ -73,6 +73,10 @@ Pull Excuse Codes from PayExceptions when initially loading the roster.
 
 Make weekstart/weekend variable (done)
 
+Make the break time variable (done).
+
+Add option to delete all schedules
+
 Issues:
 =======
 When shift cut and pasted the location and default position are not showing in the shift dialog (fixed)
@@ -94,7 +98,9 @@ Shortcuts\Manage - allow managers to add shortcuts
 
 Copy From is hidden when roster has not been saved (fixed).
 
-Maintenance shifts with a location specified do not seem to export to Acumen.
+Maintenance shifts with a location specified do not seem to export to Acumen (was not an issue. database query used to verify the inserts was incorrect)
+
+Finish the functionality for Change position. The position include the qualifier so need to account for that.
 
 Algorithm for Saving Roster
 ===========================

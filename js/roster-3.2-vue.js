@@ -583,12 +583,27 @@ function Schedule(date) {
     }
 
     this.changeLocation = function(newvalue) {
-        if (!this.isEmpty()) {
+        if (!this.isEmpty() && !this.isExcuse()) {
             if (this.firstShift) {
                 this.firstShift.location = newvalue;
             }
             if (this.secondShift) {
                 this.secondShift.location = newvalue;
+            }
+            this.format('short');
+        }
+    }
+
+    this.changePosition = function(newvalue) {
+        if (!this.isEmpty() && !this.isExcuse()) {
+            let parts = Validator.getPosition(newvalue);
+            if (this.firstShift) {
+                this.firstShift.position = parts.position;
+                this.firstShift.qualifier = parts.qualifier;
+            }
+            if (this.secondShift) {
+                this.secondShift.position = parts.position;
+                this.secondShift.qualifier = parts.qualifier;
             }
             this.format('short');
         }
@@ -615,13 +630,6 @@ let rostershift = {
                 v-on:keyup.arrow-up="handleArrowUp"/>`, 
     data: function() {
         return {
-            //shiftstring: this.schedule.shiftstring,
-            // shortcuts: {
-            //     o: 'OFF',
-            //     or: 'OFF (R)',
-            //     s: 'SL',
-            //     i: 'IL'
-            // },
             highlighted: false
         }
     },
@@ -644,12 +652,6 @@ let rostershift = {
     },
     methods: {
         valueChanged: function() {
-            // for(let key in this.shortcuts){
-            //     if (this.schedule.shiftstring === key) {
-            //         this.schedule.shiftstring = this.shortcuts[key];
-            //         break;
-            //     }
-            // }
             for(let shortcut of data.shortcuts) {
                 if(this.schedule.shiftstring.toLowerCase() === shortcut.shortcut.toLowerCase()) {
                     this.schedule.shiftstring = shortcut.replacement;
@@ -669,12 +671,9 @@ let rostershift = {
             this.$emit('enter-shifts', schedule);
         },
         handleMouseDown: function(event) {
-            //console.log(event);
             if (event.ctrlKey) {
                 this.highlighted = true;
             } else if (event.shiftKey) {
-                // let row = this.$parent.$el.getAttribute('data-row');
-                // let col = this.$parent.$el.getAttribute('data-col');
                 EventBus.$emit('CELL-HIGHLIGHT-START', { row: this.row, column: this.col});
             } else {
                 if (event.which !== 3 || (event.which === 3 && !this.highlighted)) {
@@ -684,26 +683,19 @@ let rostershift = {
         },
         handleMouseUp: function(event) {
             if (event.shiftKey) {
-                //this.highlighted = true;
-                // let row = this.$parent.$el.getAttribute('data-row');
-                // let col = this.$parent.$el.getAttribute('data-col');
                 EventBus.$emit('CELL-HIGHLIGHT-END', { row: this.row, column: this.col});
             }
         },
         handleArrowRight: function(event) {
-            //console.log('Arrow right pressed');
             EventBus.$emit('ARROW-RIGHT', {row: this.row, column: this.col});
         },
         handleArrowLeft: function(event) {
-            //console.log('Arrow right pressed');
             EventBus.$emit('ARROW-LEFT', {row: this.row, column: this.col});
         },
         handleArrowDown: function(event) {
-            //console.log('Arrow right pressed');
             EventBus.$emit('ARROW-DOWN', {row: this.row, column: this.col});
         },
         handleArrowUp: function(event) {
-            //console.log('Arrow right pressed');
             EventBus.$emit('ARROW-UP', {row: this.row, column: this.col});
         },
         handleFocusIn: function(event) {
@@ -726,7 +718,6 @@ let rostershift = {
             navigator.clipboard.readText().then(clipText =>
             {
                 this.schedule.shiftstring = clipText;
-                //this.schedule.isDirty = true;
                 this.valueChanged();
             });
         },
@@ -752,10 +743,7 @@ let rostershift = {
             } 
         },
         onHighlightCell: function(cell) {
-            //let row = this.$parent.$el.getAttribute('data-row');
-            //let col = this.$parent.$el.getAttribute('data-col');
             if (this.row === cell.row && this.col === cell.column) {
-                //console.log(`highlighting row: ${row}, col: ${col}`);
                 this.highlighted = true;
             }
         },
@@ -768,6 +756,18 @@ let rostershift = {
         onChangeLocation: function(newlocation) {
             if (this.highlighted || this.$parent.isActive) {
                 this.schedule.changeLocation(newlocation);
+            }
+        },
+        onChangePosition: function(newposition) {
+            if (this.highlighted || this.$parent.isActive) {
+                this.schedule.changePosition(newposition);
+            }
+        },
+        onSetExcuseCode: function(code) {
+            if (this.highlighted || this.$parent.isActive) {
+                this.schedule.shiftstring = code;
+                this.schedule.setShifts();
+                this.schedule.format('short');
             }
         }
     },
@@ -793,6 +793,12 @@ let rostershift = {
         EventBus.$on('CHANGE-LOCATION', (newlocation) => {
             this.onChangeLocation(newlocation);
         });
+        EventBus.$on('CHANGE-POSITION', (newposition) => {
+            this.onChangePosition(newposition);
+        });
+        EventBus.$on('SET-EXCUSECODE', (code) => {
+            this.onSetExcuseCode(code);
+        })
     }
 }
 
@@ -2330,8 +2336,13 @@ const app = new Vue({
             this.emitScheduleUpdated();
         },
         menuoption_changeLocation: function(locID) {
-            //console.log(`Change location to ${locID}`);
             EventBus.$emit('CHANGE-LOCATION', locID);
+        },
+        menuoption_changePosition: function(position) {
+            EventBus.$emit('CHANGE-POSITION', position);
+        },
+        menuoption_setExcuseCode: function(code) {
+            EventBus.$emit('SET-EXCUSECODE', code);
         },
         missingCellsModalOKClicked: function() {
             $(this.$refs.missingCellsDialog.$el).modal('hide');
@@ -2529,6 +2540,10 @@ const app = new Vue({
         emitScheduleUpdated: function() {
             EventBus.$emit('SCHEDULE-UPDATED');
         },
+        isValidRosteredAtLocation: function(target) {
+            let regex = new RegExp(this.location.rosteredat, 'gi');
+            return regex.test(target.type);
+        }
     },
     created: function() {
         let url = `getlocations-2.php`;
