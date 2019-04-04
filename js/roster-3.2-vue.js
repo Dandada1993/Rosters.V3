@@ -483,7 +483,7 @@ function Schedule(date) {
         return this.secondShift.format(format, secondShift_options);
     }
 
-    this.format = function(format) { 
+    this.format = function(format, setshiftstring = true) { 
         let retval = '';
         if (Validator.isExcuse(this.shiftstring)) {
             retval = this.shiftstring;
@@ -556,8 +556,10 @@ function Schedule(date) {
                 retval = this.firstShift.format(format, firstShift_options);
             }
         }
-        //return retval.toUpperCase();
-        this.shiftstring = retval.toUpperCase();
+        if (setshiftstring) {
+            this.shiftstring = retval.toUpperCase();
+        }
+        return retval.toUpperCase();
     }
 
     this.hours = function() {
@@ -689,15 +691,21 @@ let rostershift = {
             return false;
         },
         title: function() {
-            let result = '';
+            let result;
             if (this.isEmpty) {
-                result = '';
+                result = 'Enter shift or excuse code';
             } else if (!Validator.isExcuse(this.schedule.shiftstring) && !Validator.validShifts(this.schedule.shiftstring)) {
                 result = 'Invalid shift';
             } else if (this.isTooShort) {
                 result = `Shift is shorter than ${data.location.minimumshift} hours`;
             } else if (this.isTooLong) {
                 result = `Shift is greater than ${data.location.maximumshift} hours`;
+            } else if (this.isOnLoan) {
+                result = `Employee on loan`;
+            } else if (this.isVisiting) {
+                result = `Employee visiting from ${this.employee.defaultLocation.toUpperCase()}`;
+            } else if (Validator.validShifts(this.schedule.shiftstring)) {
+                result = this.schedule.format('long', false);
             }
             return result;
         }
@@ -712,6 +720,9 @@ let rostershift = {
             if (this.isValid){
                 this.schedule.setShifts();
                 this.schedule.format("short");
+                if (this.schedule.hours() > data.location.maximumshift) {
+                    EventBus.$emit('HOURS-EXCEEDED', { cell: { row: this.row, column: this.col}, schedule: this.schedule });
+                }
             }
             this.schedule.isDirty = true;
             this.emitChanged();
@@ -794,18 +805,6 @@ let rostershift = {
                 this.emitChanged();
             } 
         },
-        // tooShort: function() {
-        //     if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < parseFloat(data.location.minimumshift)) {
-        //         return true;
-        //     }
-        //     return false;
-        // },
-        // tooLong: function() {
-        //     if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > parseFloat(data.location.maximumshift)) {
-        //         return true;
-        //     }
-        //     return false;
-        // },
         onHighlightCell: function(cell) {
             if (this.row === cell.row && this.col === cell.column) {
                 this.highlighted = true;
@@ -954,6 +953,13 @@ let positionselector = {
             }else{
                 this.employee.defaultPosition = parts[0];
             }
+            for(let schedule of this.employee.schedules) {
+                schedule.defaultQualifier = this.employee.defaultQualifier;
+                schedule.defaultPosition = this.employee.defaultPosition;
+                if (schedule.shiftstring) {
+                    schedule.format('short'); 
+                }
+            }
         }
     },
     methods: {
@@ -1008,7 +1014,7 @@ let rosterslot = {
                     v-on:update-hours="updatehours()"
                     v-on:enter-shifts="emitEnterShift">
                 </rostershiftcell>
-                <td class="col hours number" :class="{invalid: !hoursMeetMinimum}" tabindex="-1">{{hours}}</td>
+                <td class="col hours number" :class="{invalid: !hoursMeetMinimum}" tabindex="-1" data-toggle="tooltip" :title="hoursTitle">{{hours}}</td>
                </tr>`,
     components: {
        'rostershiftcell' : rostershiftcell,
@@ -1055,6 +1061,17 @@ let rosterslot = {
                 return true;
             }
             return false;
+        },
+        hoursTitle: function() {
+            let target = parseInt(data.location.minimumhours);
+            if (this.isGradeA) {
+                target = parseInt(data.location.maximumhours);
+            }
+            if (this.hours < target) {
+                return `Less than the employee's miniumum ${target} hours`;
+            } else {
+                return '';
+            }
         }
     },
     methods: {
@@ -1739,6 +1756,44 @@ let copyfromroster = {
     }
 }
 
+let maxhoursexceeded = {
+    props: ['hours', 'shiftstring', 'cell'],
+    components: {
+        'genericdialog' : genericdialog
+    },
+    template: `<genericdialog
+                    handle="maximumhoursexceeded"
+                    :title="title">
+                    <template slot="body">
+                        <div class="form-group">
+                            <p>{{message}}</p>
+                            <p>Are you sure you want to continue?</p>
+                        </div>
+                    </template>
+                    <template slot="btn_ok">
+                        <button type="button" class="btn btn-default" v-on:click="closeDialog">Close</button>
+                        <button type="button" class="btn btn-primary" v-on:click="maximumhoursviolated_okclicked">Edit</button>
+                    </template>
+                </genericdialog>`,
+    computed: {
+        title: function() {
+            return `Shift is more than ${this.hours} hours`;
+        },
+        message: function() {
+            return `The shift ${this.shiftstring} is more than ${this.hours} hours in length.`;
+        }
+    },
+    methods: {
+        maximumhoursviolated_okclicked: function() {
+            this.closeDialog();
+            EventBus.$emit('TAKE-FOCUS', this.cell);
+        },
+        closeDialog: function() {
+            $(this.$el).modal('hide');
+        }
+    }
+}
+
 const app = new Vue({
     el: '#main',
     data: {
@@ -1782,7 +1837,10 @@ const app = new Vue({
             start: null,
             end: null
         },
-        approvedrosters: []
+        approvedrosters: [],
+        hoursexceeded: 0,
+        hoursexceeded_shiftstring: '',
+        hoursexceeded_cell: null
         // additionalhours: 0
     },
     components: {
@@ -1792,7 +1850,8 @@ const app = new Vue({
         'datepicker' : vuejsDatepicker,
         'genericdialog' : genericdialog,
         'selectiondialog' : selectiondialog,
-        'copyfromroster' : copyfromroster
+        'copyfromroster' : copyfromroster,
+        'maxhoursexceeded' : maxhoursexceeded
     },
     watch: {
         locations: function() {
@@ -2193,11 +2252,11 @@ const app = new Vue({
         },
         saveRosterEmployees: function() {
             for(let employee of this.employees) {
-                if (!employee.id || employee.id === '0') {
-                    this.saveRosterEmployee(employee); 
-                } else {
-                    this.saveRosterSchedules(employee);
-                }
+                // if (!employee.id || employee.id === '0') {
+                this.saveRosterEmployee(employee); 
+                // } else {
+                //     this.saveRosterSchedules(employee);
+                // }
             }
         },
         removeDeletedRosterEmployees: function() {
@@ -2226,11 +2285,6 @@ const app = new Vue({
                     if (!employee.id || employee.id === "0") {
                         employee.id = result[0].id;
                     }
-                    // for(let schedule of employee.schedules) {
-                    //     if (schedule.isDirty) {
-                    //         this.saveRosterSchedule(employee.id, schedule);
-                    //     }
-                    // }
                     this.saveRosterSchedules(employee);
                 }
             })
@@ -2249,7 +2303,7 @@ const app = new Vue({
                         this.saveRosterSchedule(employee.id, schedule);
                     } else {
                         if (parseInt(schedule.id) > 0) {
-                            this.deleteEmployeeSchedule(schedule.id)
+                            this.deleteEmployeeSchedule(schedule.id);
                         }
                     }
                 }
@@ -2385,7 +2439,7 @@ const app = new Vue({
                         schedule.id = 0;
                         schedule.shiftstring = '';
                         schedule.setShifts();
-                        schedule.format('short');
+                        //schedule.format('short');
                         schedule.isDirty = true;
                     }
                 }
@@ -2422,9 +2476,6 @@ const app = new Vue({
         },
         menuoption_print: function() {
             window.print();
-        },
-        menuoption_test: function(value) {
-            console.log(`Value passed is: ${value}`);
         },
         menuoption_deleteAllShifts: function() {
             // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.removeSchedules);
@@ -2625,6 +2676,11 @@ const app = new Vue({
         .then(json => {
             this.locations = json;
         });
+        let vm = this;
+        window.setInterval(function() { 
+            vm.saveRoster();
+            //console.log('Autosaving roster');
+        }, 300000); //Autosave every five minuutes.
     },
     mounted: function() {
         EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {
@@ -2670,6 +2726,12 @@ const app = new Vue({
             target.row = cell.row - 1;
             EventBus.$emit('TAKE-FOCUS', target);
         });
+        EventBus.$on('HOURS-EXCEEDED', (eventdata) => {
+            this.hoursexceeded = data.location.maximumshift;
+            this.hoursexceeded_shiftstring = eventdata.schedule.shiftstring;
+            this.hoursexceeded_cell = eventdata.cell;
+            $(this.$refs.maximumHoursExceededDialog.$el).modal('show');
+        })
 
     }
     // updated: function(){

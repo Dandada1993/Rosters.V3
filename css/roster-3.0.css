@@ -1,6 +1,15 @@
 #main table {
     border-collapse: collapse;
     table-layout: fixed;
+}
+
+#top {
+    margin-bottom: 20px;
+}
+
+.rosterheader,
+.section
+{
     width: 100%;
 }
 
@@ -84,6 +93,12 @@ td:not(.shift) {
     font-size: 1.5rem;
     font-weight: bold;
     background: palegoldenrod;
+    width: 100%;
+}
+
+.section .details
+{
+    width: 100%;
 }
 
 #top {
@@ -130,7 +145,7 @@ h4 {
     display: inline;
 }
 
-#top .left {
+/* #top .left {
     float: left;
     width: 70%;
 }
@@ -139,7 +154,29 @@ h4 {
     float: right;
     width: 30%;
     max-width: 300px;
+} */
+
+.left {
+    float: left;
 }
+
+.right {
+    float: right;
+}
+
+#top h2 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#top .legend {
+    margin-left: 50px;
+    /* margin-right: auto; */
+}
+
+/* #top .stats {
+    width: 25%;
+} */
 
 .rostertotals {
     display: inline-block;
@@ -150,15 +187,24 @@ h4 {
 }
 
 .stats .title, 
-.rostertotals .title {
+.rostertotals .title,
+.legend .title
+{
     width: 250px;
     background: palegoldenrod;
 }
 
 .stats .data, 
-.rostertotals .data {
+.rostertotals .data
+{
     min-width: 50px;
     max-width: 50px;
+}
+
+.legend .data
+{
+    min-width: 25px;
+    max-width: 25px;
 }
 
 .gradeA {
@@ -256,6 +302,7 @@ td.position {
     .hours,
     .btn-add,
     .stats,
+    .legend,
     .rostertotals,
     .longname,
     .shift-input {

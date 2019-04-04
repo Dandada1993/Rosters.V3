@@ -6,12 +6,12 @@ Implement context sensitive menu (single cell paste only)
 	
 Ability to highlight multiple cells (completed)
 
-Save roster to database (done - testing)
+Save roster to database (done)
 	Save roster to roster.Rosters. Retrieve ID
 	For each employee save to roster.RosterEmps -- how to handle situation where employee already exists
 		For each shift save to roster.RosterEmpsShifts -- how to handle situation where shift already exists
 
-Retrieve roster from database (done - testing)
+Retrieve roster from database (done)
 
 Saving to Working Schedules (done - testing)
 	Copy TimeAttendanceADS Groups, Departments and Employees to TAADSTest
@@ -20,7 +20,7 @@ Saving to Working Schedules (done - testing)
 		delete working schedules for week starting
 		save each schedule by shift
 
-Need to save roster every x minutes
+Need to save roster every x minutes (done. Hardcoded to 5 minutes)
 
 Ability to mark Bank Holidays
 
@@ -32,9 +32,9 @@ Load excuse code dynamically (done)
 
 Implement multicell cut, copy and paste
 
-Implement Tooltip for cells when text is too long and for cells with errors.
+Implement Tooltip for cells when text is too long and for cells with errors (done).
 
-Highlight shifts shorter than x hours and longer than y hours. Have x and y configurable by location (x & y have been defined and configured in database)
+Highlight shifts shorter than x hours and longer than y hours. Have x and y configurable by location (x & y have been defined and configured in database) (done).
 
 Account for Grade A and Grade B hours and maybe show hours as invalid when the respective miniumums are not met (done)
 
@@ -63,9 +63,9 @@ Maintenance
 
 Make positions in position regular expression dynamic
 
-Highlight shifts not at currently location i.e. loaned employees when flag is set in LocationsDef
+Highlight shifts not at currently location i.e. loaned employees when flag is set in LocationsDef (done).
 
-Highlight visiting employees when flag is set in LocationsDef
+Highlight visiting employees when flag is set in LocationsDef (done).
 
 Add additional menu options e.g. setting location on highlighted cells (done)
 
@@ -80,6 +80,18 @@ Add option to delete all schedules (done)
 Hide the Send For Approval and Appove options is the autoapprove is set to 1. (done)
 
 Add the ability for custom shortcuts to be added.
+
+Add legend to roster for invalid cells, visiting, on loan etc (done).
+
+Add tool tip for on loan and visiting (done).
+
+Do help pages
+	Documentation
+	Tips & Tricks
+	
+Show warning when shift is over maximum hours (done)
+
+Add tooltip to hours (done)
 
 Issues:
 =======
@@ -106,6 +118,12 @@ Maintenance shifts with a location specified do not seem to export to Acumen (wa
 
 Finish the functionality for Change position. The position include the qualifier so need to account for that. (completed)
 
+Update php on Domino server (done).
+
+Default position changes not persisting to database (done).
+
+Changes in default position should change the default position for shifts for which no shiftstring has been entered. An cause shifts not at the new default position to display their position.
+
 Algorithm for Saving Roster
 ===========================
 1. Save all employees where the ID (not emp_no) is 0. On saving update the ID.
@@ -114,3 +132,44 @@ Algorithm for Saving Roster
 
 If an employee is delete and re-added the ID should be 0.
 
+Documentation
+=============
+
+Tips and tricks
+===============
+Entering excuse codes:
+	The following abbreviations can be used when entering excuse codes:
+		o - OFF
+		or - OFF (R)
+		i - IL
+		c - CL
+		s - SL
+		v - VAC
+	Enter the shortcode and hit enter or use arrow keys or mouse to go to another field
+	
+Entering shifts:
+	Shifts can be entered using any of the formats below:
+		9a-2p
+		9am-2pm
+		9:00AM-2:00PM
+		10a-330p
+		10am-330pm
+		10:00AM-3:30PM
+
+Specifing a location
+	When entering a shift use provide a location by entering @ following by the location abbreviation e.g. @ROC for a shift at ROC.
+	
+Specifing a position
+	When entering a shift use change the default position by entering the position code next to the shift e.g. CR for cashier, PR for preparation hostess e.g. 9a-5p CR
+	
+	To differential a restaurant cashier, from barn and drive thru prefix with #REST, #BARN, #DTRU respectively.
+	
+Providing a comment
+	Comment can be entered with shifts by prefixing them with ** e.g. 10a-3p FC **Party 
+	
+Remove employees from roster by clicking the x shown in the row header
+
+Add employees to a particular section by clicking the Add button next to the section title. Double click any employee from the list of employees shown.
+
+Enter barn shifts
+Change default position to the BARN equivalent before entering any shifts

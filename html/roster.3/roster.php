@@ -92,6 +92,7 @@
                             <ul class="dropdown-menu">
                                 <li><a >Documentation</a></li>
                                 <li><a >Tips and Tricks</a></li>
+                                <li><a >Show Shortcuts</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -102,6 +103,24 @@
             <div>
                 <span class="left">
                     <h2>{{location.name}} (week ending: {{weekendingDisplay}})</h2>
+                </span>
+                <span class="left">
+                    <table class="legend" v-if="location">
+                        <tbody>
+                            <tr>
+                                <td class="data invalid">&nbsp;</td>
+                                <td class="title">Invalid shifts</td>
+                                <td class="data visiting" v-show="location.showvisitingemployees === '1'">&nbsp;</td>
+                                <td class="title" v-show="location.showvisitingemployees === '1'">Visiting employee</td>
+                            </tr>
+                            <tr>
+                                <td class="data toolong">&nbsp;</td>
+                                <td class="title">Over {{location.maximumshift}} hours</td>
+                                <td class="data onloan" v-show="location.showloanedemployees === '1'">&nbsp;</td>
+                                <td class="title"  v-show="location.showloanedemployees === '1'">Employee on loan</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </span>
                 <span class="right">
                     <table class="stats">
@@ -120,7 +139,7 @@
             </div>
         </div>
         <div v-if="sections">
-            <table>
+            <table class="rosterheader">
                 <tbody>
                     <tr data-row="0">
                         <td class="col rowheader header" data-col="1" rowspan="2">&nbsp;</td>
@@ -269,6 +288,7 @@
                 <button id="okbutton" type="button" class="btn btn-primary">Proceed</button>
             </template>
         </div>
+        <div ref="maximumHoursExceededDialog" is="maxhoursexceeded" :hours="hoursexceeded" :shiftstring="hoursexceeded_shiftstring" :cell="hoursexceeded_cell"></div>
         <ul ref="contextMenu" id="contextMenu" class="dropdown-menu" role="menu" style="display:none" >
             <li><a tabindex="-1">Cut</a></li>
             <li><a tabindex="-1">Copy</a></li>
