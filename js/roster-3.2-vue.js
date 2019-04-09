@@ -109,7 +109,7 @@ function hideShiftEntryModal() {
 }
 
 let patterns = { 
-    excusecode: '^(off(?:\\s?\\(r\\))?|~)$', //'^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
+    excusecode: '^(off(?:\\(r\\))?|~)$', //'^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
     times: '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
     location: '(?:(?:\\s+)(?:@?)(~))', //'(?:(?:\\s+)@([a-z]{3,4}))'
     position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(~))',
@@ -1849,7 +1849,11 @@ const app = new Vue({
         approvedrosters: [],
         hoursexceeded: 0,
         hoursexceeded_shiftstring: '',
-        hoursexceeded_cell: null
+        hoursexceeded_cell: null,
+        acumenexport: {
+            title : '',
+            body : ''
+        }
         // additionalhours: 0
     },
     components: {
@@ -1946,15 +1950,17 @@ const app = new Vue({
         },
         setExcuseCodesRegExPattern: function() {
             let pattern = '';
-            for(let i = 0; i < this.excusecodes.length; i++) {
-                if (this.excusecodes[i].isoff === '0') {
-                    if (pattern) {
-                        pattern += '|';
+                if (this.excusecodes) {
+                for(let i = 0; i < this.excusecodes.length; i++) {
+                    if (this.excusecodes[i].isoff === '0') {
+                        if (pattern) {
+                            pattern += '|';
+                        }
+                        pattern += this.excusecodes[i].code;
                     }
-                    pattern += this.excusecodes[i].code;
                 }
+                patterns.excusecode = patterns.excusecode.replace('~', pattern);
             }
-            patterns.excusecode = patterns.excusecode.replace('~', pattern);
         },
         updatestats: function() {
             //console.log("updating stats");
@@ -2261,11 +2267,7 @@ const app = new Vue({
         },
         saveRosterEmployees: function() {
             for(let employee of this.employees) {
-                // if (!employee.id || employee.id === '0') {
                 this.saveRosterEmployee(employee); 
-                // } else {
-                //     this.saveRosterSchedules(employee);
-                // }
             }
         },
         removeDeletedRosterEmployees: function() {
@@ -2339,25 +2341,23 @@ const app = new Vue({
         insertPayException: function(employee, schedule) {
             //console.log('Insert Pay Exception');
             let pComment = this.getPComment(schedule.shiftstring);
-            if (pComment) {
-                let formData = new FormData();
-                formData.append('emp_no', employee.emp_no);
-                formData.append('pComment', pComment);
-                formData.append('date', schedule.date.format('YYYY-MM-DD'));
-                formData.append('islive', this.location.isLive);
-                let url = 'insertPayException.php';
-                fetch(url, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(result => {
-                    console.log(`Successfully inserted shift ${shift.format()} for employee ${employee.emp_no}. ID assigned: ${result[0].id}`);
-                })
-                .catch(error => console.error(`Failed to insert pay exception ${schedule.shiftstring} for employee ${employee.emp_no}. `, error));
-                // const request = async () => { await fetch(url, { method: 'POST', body: formData}); }
-                // request();
-            }
+            let formData = new FormData();
+            formData.append('emp_no', employee.emp_no);
+            formData.append('pComment', pComment);
+            formData.append('date', schedule.date.format('YYYY-MM-DD'));
+            formData.append('islive', this.location.isLive);
+            let url = 'insertPayException.php';
+            return fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                return result[0].id;
+            })
+            .catch(error => { return 0; });
+            // const request = async () => { await fetch(url, { method: 'POST', body: formData}); }
+            // request();
         },
         deleteSchedule: function(employee, date) {
             let url = `deleteSchedule.php?&emp_no=${employee.emp_no}&date=${date.format('YYYY-MM-DD')}&islive=${this.location.isLive}`;
@@ -2385,35 +2385,64 @@ const app = new Vue({
             formData.append('qualifier', shift.qualifier);
             formData.append('islive', this.location.isLive);
             let url = 'insertWorkingSchedule.php';
-            fetch(url, {
+            return fetch(url, {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.json())
             .then(result => {
-                console.log(`Successfully inserted shift ${shift.format()} for employee ${employee.emp_no}. ID assigned: ${result[0].id}`);
+                 return result[0].id;
             })
-            .catch(error => console.error(`Failed to insert shift ${shift.format()} for employee ${employee.emp_no}. `, error));
+            .catch(error => { return 0; });
             // const request = async () => { await fetch(url, { method: 'POST', body: formData}); }
             // request();
         },
         insertSchedules: function() {
+            let payexception_promises = [];
+            let schedule_promises = [];
             for(let employee of this.employees) {
                 for(let schedule of employee.schedules) {
                     if (schedule.isExcuse()) {
-                        this.insertPayException(employee, schedule);
+                        payexception_promises.push(this.insertPayException(employee, schedule));
                     } else {
                         if (schedule.firstShift) {
                             // console.log('Inserting shift 1');
-                            this.insertWorkingSchedule(employee, schedule.firstShift);
+                            schedule_promises.push(this.insertWorkingSchedule(employee, schedule.firstShift));
                         }
                         if (schedule.secondShift) {
                             // console.log('Inserting shift 2');
-                            this.insertWorkingSchedule(employee, schedule.secondShift);
+                            schedule_promises.push(this.insertWorkingSchedule(employee, schedule.secondShift));
                         }
                     }
                 }
             }
+            let payexception_failures = 0;
+            let schedule_failures = 0;
+            Promise.all(payexception_promises)
+            .then(values => {
+                values.forEach(function(value) {
+                    if (parseInt(value) === 0) {
+                        payexception_failures++;
+                    }
+                })
+            });
+            Promise.all(schedule_promises)
+            .then(values => {
+                values.forEach(function(value) {
+                    if (parseInt(value) === 0) {
+                        schedule_failures++;
+                    }
+                })
+            });
+            if (payexception_failures > 0 || schedule_failures > 0) {
+                // console.log('Some shifts failed to export to Acumen');
+                this.acumenexport.title = 'Export failed';
+                this.acumenexport.body = 'Some errors occurred while exporting this roster to Acumen. Please notify the systems department.'
+            } else {
+                this.acumenexport.title = 'Export succeeded';
+                this.acumenexport.body = 'The export was successful.'
+            }
+            $(this.$refs.resultAcumenExportDialog.$el).modal('show');
         },
         exportToAcumen: function() {
             this.saveRoster(true); //save roster

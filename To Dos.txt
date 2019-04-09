@@ -93,6 +93,10 @@ Show warning when shift is over maximum hours (done)
 
 Add tooltip to hours (done)
 
+Add confirmation when roster saved
+
+Add confirmation when roster exported
+
 Issues:
 =======
 When shift cut and pasted the location and default position are not showing in the shift dialog (fixed)

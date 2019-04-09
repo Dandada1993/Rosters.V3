@@ -300,6 +300,17 @@
                 <button id="okbutton" type="button" class="btn btn-primary">Proceed</button>
             </template>
         </div>
+        <div ref="resultAcumenExportDialog" 
+            is="genericdialog"
+            show-cancel
+            handle="acumen-export"
+            :title="acumenexport.title">
+            <template slot="body">
+                <div class="form-group">
+                    <p>{{acumenexport.body}}</p>
+                </div>
+            </template>
+        </div>
         <div ref="maximumHoursExceededDialog" is="maxhoursexceeded" :hours="hoursexceeded" :shiftstring="hoursexceeded_shiftstring" :cell="hoursexceeded_cell"></div>
         <ul ref="contextMenu" id="contextMenu" class="dropdown-menu" role="menu" style="display:none" >
             <li><a tabindex="-1">Cut</a></li>
