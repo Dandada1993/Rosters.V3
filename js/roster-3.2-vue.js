@@ -112,7 +112,7 @@ let patterns = {
     excusecode: '^(off(?:\\s?\\(r\\))?|~)$', //'^(off(?:\\s?\\(r\\))?|vac|sl|il|cl)$',
     times: '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
     location: '(?:(?:\\s+)(?:@?)(~))', //'(?:(?:\\s+)@([a-z]{3,4}))'
-    position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(cr|fc|pr|sr|cl|ck|mt))',
+    position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(~))',
     time: '^(0?\\d|1(?:0|1|2))((?:(\\:)?)((?:0|3)0))?\\s*((?:a|p)m?)',
     qualifier: '(rest|barn|dtru)',
     comment: '(?:\\*\\*)([A-Za-z\\s]+)'
@@ -819,11 +819,13 @@ let rostershift = {
         onChangeLocation: function(newlocation) {
             if (this.highlighted || this.$parent.isActive) {
                 this.schedule.changeLocation(newlocation);
+                this.schedule.isDirty = true;
             }
         },
         onChangePosition: function(newposition) {
             if (this.highlighted || this.$parent.isActive) {
                 this.schedule.changePosition(newposition);
+                this.schedule.isDirty = true;
             }
         },
         onSetExcuseCode: function(code) {
@@ -932,12 +934,17 @@ let rostershiftcell = {
 let positionselector = {
     props: ['employee','positions','hasqualifier'],
     template: `<td class="col position">
+                    <template v-if="positions && positions.length > 1">
                     <select v-model="selected">
                         <option 
                             v-for="(position, index) in positions" 
                             :key="index"
                             :value="position">{{position}}</option>
                     </select>
+                    </template>
+                    <template v-else>
+                        <span>{{positions[0]}}</span>
+                    </template>
                </td>`,
     data: function() {
         return {
@@ -1057,8 +1064,10 @@ let rosterslot = {
             }
         },
         isVisiting: function() {
-            if (this.employee.defaultLocation.toUpperCase() !== data.location.locID.toUpperCase()) {
-                return true;
+            if (data.location.showvisitingemployees === '1') {
+                if (this.employee.defaultLocation.toUpperCase() !== data.location.locID.toUpperCase()) {
+                    return true;
+                }
             }
             return false;
         },
@@ -1127,7 +1136,7 @@ let rosterslot = {
 let rostersection = {
     props: ['section', 'employees', 'qualifiers', 'positions'],
     template: `<div v-bind:data-sectionID="section.id">
-                <table class="title">
+                <table class="title table-bordered">
                     <tbody>
                         <tr>
                             <td>{{section.name}}
@@ -1143,7 +1152,7 @@ let rostersection = {
                         </tr>
                     </tbody>
                 </table>
-                <table class="details">
+                <table class="details table-bordered">
                     <tbody>
                         <rosterslot 
                             class="rosterrow" 
@@ -2341,8 +2350,13 @@ const app = new Vue({
                     method: 'POST',
                     body: formData
                 })
-                // .then(response => response.json())
+                .then(response => response.json())
+                .then(result => {
+                    console.log(`Successfully inserted shift ${shift.format()} for employee ${employee.emp_no}. ID assigned: ${result[0].id}`);
+                })
                 .catch(error => console.error(`Failed to insert pay exception ${schedule.shiftstring} for employee ${employee.emp_no}. `, error));
+                // const request = async () => { await fetch(url, { method: 'POST', body: formData}); }
+                // request();
             }
         },
         deleteSchedule: function(employee, date) {
@@ -2375,8 +2389,13 @@ const app = new Vue({
                 method: 'POST',
                 body: formData
             })
-            // .then(response => response.json())
+            .then(response => response.json())
+            .then(result => {
+                console.log(`Successfully inserted shift ${shift.format()} for employee ${employee.emp_no}. ID assigned: ${result[0].id}`);
+            })
             .catch(error => console.error(`Failed to insert shift ${shift.format()} for employee ${employee.emp_no}. `, error));
+            // const request = async () => { await fetch(url, { method: 'POST', body: formData}); }
+            // request();
         },
         insertSchedules: function() {
             for(let employee of this.employees) {
@@ -2502,6 +2521,7 @@ const app = new Vue({
             for(let i = 0; i < positionsarray.length; i++) {
                 this.positions.push(positionsarray[i].position);
             }
+            patterns.position = patterns.position.replace('~', this.positions.join('|'));
         },
         modalOKClicked: function(event) {
             if (this.validate()) {
@@ -2660,6 +2680,41 @@ const app = new Vue({
         save: function() {
             //console.log('Save roster');
             this.saveRoster();
+        },
+        menuoption_new: function() {
+            //reset the data options
+            this.roster = null;
+            this.sections = null;
+            this.employees = null;
+            this.savedschedules = null;
+            this.positionQualifiers = null;
+            this.excusecodes = null;
+            this.location = null;
+            this.locID = '';
+            this.weekending = null;
+            this.weekstarting = null;
+            this.positions = [];
+            this.nomissingcells = 0;
+            this.noinvalidcells = 0;
+            this.totalhours = 0;
+            this.agreedhours = 0;
+            this.deletedemployees = [];
+            this.deletedEmployeeIDs = [];
+            this.otheremployees = [];
+            this.editEmployeeIndex = -1;
+            this.editdata = null;
+            this.locationsqualifiers = [];
+            this.errors.location = false;
+            this.errors.weekending = false;
+            this.contextMenuEnabled = false;
+            this.highlight.start = null;
+            this.highlight.end = null;
+            this.approvedrosters = [];
+            this.hoursexceeded = 0;
+            this.hoursexceeded_shiftstring = '';
+            this.hoursexceeded_cell = null;
+            this.validate();
+            showStartupModal();
         },
         emitScheduleUpdated: function() {
             EventBus.$emit('SCHEDULE-UPDATED');

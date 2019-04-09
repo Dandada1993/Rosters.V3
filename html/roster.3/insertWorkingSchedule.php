@@ -22,6 +22,6 @@
     $database->addParameter('position', $position, PDO::PARAM_STR);
     $database->addParameter('qualifier', $qualifier, PDO::PARAM_STR);
     $database->addParameter('isLive', $islive, PDO::PARAM_STR);
-    $results = $database->execute_noresult(); //returns and array each element being a returned dataset
+    $results = $database->execute();  //execute_noresult(); //returns and array each element being a returned dataset
     $database->release();
-    //echo json_encode($results[0]);
+    echo json_encode($results[0]);

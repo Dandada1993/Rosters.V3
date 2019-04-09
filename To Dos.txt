@@ -1,10 +1,10 @@
-Implement context sensitive menu (single cell paste only)
+Implement context sensitive menu (done. single cell paste only)
 	Cut
 	Copy
 	Paste
 	Add excuse codes
 	
-Ability to highlight multiple cells (completed)
+Ability to highlight multiple cells (done)
 
 Save roster to database (done)
 	Save roster to roster.Rosters. Retrieve ID
@@ -61,7 +61,7 @@ Maintenance
 	Need to be able to assign maintenance to a branch. If this not currently working as position are resticted to non-maintenance positions. (done)
 	Need to be able to identify persons with and without vehicles.
 
-Make positions in position regular expression dynamic
+Make positions in position regular expression dynamic (done).
 
 Highlight shifts not at currently location i.e. loaned employees when flag is set in LocationsDef (done).
 
@@ -87,7 +87,7 @@ Add tool tip for on loan and visiting (done).
 
 Do help pages
 	Documentation
-	Tips & Tricks
+	Tips & Tricks (done)
 	
 Show warning when shift is over maximum hours (done)
 
@@ -122,7 +122,13 @@ Update php on Domino server (done).
 
 Default position changes not persisting to database (done).
 
-Changes in default position should change the default position for shifts for which no shiftstring has been entered. An cause shifts not at the new default position to display their position.
+Changes in default position should change the default position for shifts for which no shiftstring has been entered. An cause shifts not at the new default position to display their position (corrected).
+
+Intermittently some shifts are missing from the WorkingSchedules database. Changed insertWorkingSchedules and insertPayException methods to be synchronous. Issue is better but still not always consistent. Need a way to ensure that all shifts are exported successfully.
+
+OFF Requested shifts not saving to PayExceptions (done)
+
+Need to be able to roster persons at TRA (done)
 
 Algorithm for Saving Roster
 ===========================
@@ -171,5 +177,9 @@ Remove employees from roster by clicking the x shown in the row header
 
 Add employees to a particular section by clicking the Add button next to the section title. Double click any employee from the list of employees shown.
 
-Enter barn shifts
+Entering barn shifts
 Change default position to the BARN equivalent before entering any shifts
+
+======================
+Terminate maintenance persons who are no longer with us
+Remove the Maintenance group and department from the manager security ids

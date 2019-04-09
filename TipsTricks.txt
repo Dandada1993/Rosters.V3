@@ -1,0 +1,59 @@
+## Roster Tips and Tricks  
+  
+[Entering Excuse Codes](#excusecodes)  
+[Entering shift times](#entershift)  
+[Changing shift location](#location)  
+[Changing shift position](#position)  
+[Providing a comment](#comments)  
+[Deleting a row](#deleterow)  
+[Adding an employee](#addemployee)  
+[Entering Barn shifts](#barnshifts)  
+
+### Entering excuse codes {#excusecodes}
+The following abbreviations can be used when entering excuse codes:  
+* o - OFF
+* or - OFF (R)
+* i - IL
+* c - CL
+* s - SL
+* v - VAC  
+
+Enter the shortcode and hit enter or use arrow keys or mouse to go to another field
+	
+### Entering shift times {#entershift}
+
+A 9:00AM to 2:00PM shift can be entered using any of the formats below:
+* 9a-2p
+* 9am-2pm
+* 9:00AM-2:00PM
+
+A 10:00AM to 3:30PM shift can be enteed using any of the formats below:
+* 10a-330p
+* 10am-330pm
+* 10:00AM-3:30PM
+
+### Chaning shift location {#location}
+
+When entering a shift use provide a location by entering @ following by the location abbreviation e.g. @ROC for a shift at ROC.
+	
+### Changing shift position {#position}
+	
+When entering a shift use change the default position by entering the position code next to the shift e.g. **CR** for cashier, **PR** for preparation hostess e.g. 9a-5p CR
+	
+To differentiate a restaurant cashier, from barn and drive thru prefix the position with **#REST**, **#BARN** or **#DTRU** respectively.
+	
+### Providing a comment {#comments}
+	
+Comment can be entered with shifts by prefixing them with ** e.g. 10a-3p FC **Party 
+
+### Delete a row {#deleterow}
+	
+Remove an employee row from roster by clicking the x shown in the row header
+
+### Adding an employee {#addemployee}
+
+Add employees to a particular section by clicking the Add button next to the section title. Double click any employee from the list of employees shown.
+
+### Enter barn shifts {#barnshifts}
+
+Change default position to the BARN equivalent before entering any shifts
