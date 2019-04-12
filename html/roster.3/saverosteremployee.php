@@ -4,6 +4,7 @@
     require('db.php');
 
     $rostersID = $parameters['rostersID'];
+    $id = $parameters['id'];
     $emp_no = $parameters['emp_no'];
     $defaultposition = $parameters['defaultposition'];
     $defaultqualifier = $parameters['defaultqualifier'];
@@ -12,6 +13,7 @@
     $database = new database($serverName, $dbname, $userid, $password);
     $database->execProcedure('tareports.roster.cp_addrosteremployee');
     $database->addParameter('rostersID', $rostersID, PDO::PARAM_STR);
+    $database->addParameter('id', $id, PDO::PARAM_STR);
     $database->addParameter('emp_no', $emp_no, PDO::PARAM_STR);
     $database->addParameter('defaultPosition', $defaultposition, PDO::PARAM_STR);
     $database->addParameter('defaultQualifier', $defaultqualifier, PDO::PARAM_STR);

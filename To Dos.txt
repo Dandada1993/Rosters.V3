@@ -94,8 +94,10 @@ Show warning when shift is over maximum hours (done)
 Add tooltip to hours (done)
 
 Add confirmation when roster saved
+	saveRosterEmployee
+	SaveRosterSchedules
 
-Add confirmation when roster exported
+Add confirmation when roster exported to Acumen (done)
 
 Issues:
 =======
@@ -133,6 +135,8 @@ Intermittently some shifts are missing from the WorkingSchedules database. Chang
 OFF Requested shifts not saving to PayExceptions (done)
 
 Need to be able to roster persons at TRA (done)
+
+Test deleting employee from roster and it saving to the database.
 
 Algorithm for Saving Roster
 ===========================

@@ -266,6 +266,7 @@ function Shift(date, shift = '') {
     this.position = ''; 
     this.qualifier = ''; 
     this.comment = ''; 
+    this.isOnLoan = false;
 
     this.parse = function() {
         if (Validator.validShift(this.shift)) {
@@ -382,6 +383,12 @@ function Schedule(date) {
                 if (!this.firstShift.position) {
                     this.firstShift.position = this.defaultPosition;
                 }
+            }
+            if (this.secondShift && (this.secondShift.location !== data.location.locID)) {
+                this.secondShift.isOnLoan = true;
+            }
+            if (this.firstShift && (this.firstShift.location !== data.location.locID)) {
+                this.firstShift.isOnLoan = true;
             }
         } else {
             this.firstShift = null;
@@ -560,6 +567,20 @@ function Schedule(date) {
             this.shiftstring = retval.toUpperCase();
         }
         return retval.toUpperCase();
+    }
+
+    this.getFullShiftString = function() {
+        let options = {
+            showlocation: true,
+            showqualifier: true,
+            showposition: true
+        }
+        this.setShifts();
+        if (this.secondShift) {
+            return `${this.firstShift.format('short', options)}/${this.secondShift.format('short', options)}`;
+        } else {
+            return this.firstShift.format('short', options);
+        }
     }
 
     this.hours = function() {
@@ -1821,6 +1842,7 @@ const app = new Vue({
         nomissingcells: 0,
         noinvalidcells: 0,
         totalhours: 0,
+        loanedhours: 0,
         agreedhours: 0,
         deletedemployees: [],
         deletedEmployeeIDs: [],
@@ -1998,10 +2020,29 @@ const app = new Vue({
         },
         hoursUpdated: function() {
             this.totalhours = 0;
+            this.loanedhours = 0;
             if (this.employees) {
-                for(employee of this.employees) {
-                    if(employee.hours) {
-                        this.totalhours += employee.hours;
+                for(let employee of this.employees) {
+                    // if(employee.hours) {
+                    //     this.totalhours += employee.hours;
+                    // }
+                    for(let schedule of employee.schedules) {
+                        if (schedule.firstShift) {
+                            let hours = schedule.firstShift.hours();
+                            if (schedule.firstShift.isOnLoan) {
+                                this.loanedhours += hours;
+                            } else {
+                                this.totalhours += hours;
+                            }
+                        }
+                        if (schedule.secondShift) {
+                            let hours = schedule.secondShift.hours();
+                            if (schedule.secondShift.isOnLoan) {
+                                this.loanedhours += hours;
+                            } else {
+                                this.totalhours += hours;
+                            }
+                        }
                     }
                 }
             }
@@ -2042,6 +2083,7 @@ const app = new Vue({
                 if (employee && scheduleindex !== null) {
                     let schedule = employee.schedules[scheduleindex];
                     schedule.id = savedschedule.id;
+                    schedule.rosterID = savedschedule.rosterID;
                     schedule.shiftstring = savedschedule.shiftstring;
                     schedule.setShifts();
                     schedule.format('short');
@@ -2128,16 +2170,16 @@ const app = new Vue({
             }
             return qualifiers;
         },
-        loadRoster: function(callback) {
+        loadRoster: function() {
             let url = `getroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(result => {
                 if (result.length === 1)
                 this.roster = result[0];
-                if (callback) {
-                    callback();
-                }
+                // if (callback) {
+                //     callback();
+                // }
             })
         },
         loadSections: function() {
@@ -2245,50 +2287,76 @@ const app = new Vue({
                 this.approvedrosters = results;
             });
         },
-        saveRoster: function(exportToAcumen = false) {
+        saveRoster: function(exportToAcumen = false, confirm = false) {
             let url = `saveroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             if (exportToAcumen) {
                 url = url + `&exporttoacumen=1`;
             }
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(result => {
                 if (result) {
-                    this.loadRoster(this.completeRosterSave);
+                    this.loadRoster()
+                    .then(() => {
+                        this.completeRosterSave()
+                        .then(() => {
+                            this.acumenexport.title = 'Save succeeded';
+                            this.acumenexport.body = 'The roster was saved successful.'
+                        })
+                        .catch(() => {
+                            this.acumenexport.title = 'Save failed';
+                            this.acumenexport.body = 'Some errors occurred while saving this roste. Please notify the systems department.'
+                        }).finally(() => {
+                            if (confirm) {
+                                $(this.$refs.resultAcumenExportDialog.$el).modal('show');
+                            }
+                        });
+                    });
                 }
             });
         },
         completeRosterSave: function() {
             if (this.roster.id) {
                 //this.roster = result[0];
-                this.saveRosterEmployees();
-                //this.removeDeletedRosterEmployees();
+                let savePromise = Promise.all(this.saveRosterEmployees())
+                .then(() => {
+                    Promise.all(this.saveRosterSchedules());
+                });
+                let deletePromise = Promise.all(this.removeDeletedRosterEmployees());
+                return Promise.all([savePromise, deletePromise]);
             }
+            return Promise.resolve(null);
         },
         saveRosterEmployees: function() {
+            let promises = [];
             for(let employee of this.employees) {
-                this.saveRosterEmployee(employee); 
-            }
+                promises.push(this.saveRosterEmployee(employee)); 
+            };
+            return promises;
         },
         removeDeletedRosterEmployees: function() {
+            let promises = [];
             for(let id in this.deletedEmployeeIDs) {
-                this.deleteRosterEmployee(id);
+                promises.push(this.deleteRosterEmployee(id));
             }
+            return promises;
         },
         saveRosterEmployee: function(employee) {
             let formData = new FormData();
             formData.append('rostersID', this.roster.id);
+            let id = 0;
+            if (employee.id) {
+                id = employee.id;
+            }
+            formData.append('id', id);
             formData.append('emp_no', employee.emp_no);
             formData.append('defaultposition', employee.defaultPosition);
             formData.append('defaultqualifier', employee.defaultQualifier);
             formData.append('sectionsdefid', employee.sectionsDefID);
             let url = 'saverosteremployee.php';
-            fetch(url, {
+            return fetch(url, {
                 method: 'POST',
-                body: formData        //, //JSON.stringify(data),
-                // headers: {
-                //     'Content-Type': 'application/json'
-                // }
+                body: formData 
             })
             .then(response => response.json())
             .then(result => {
@@ -2296,45 +2364,51 @@ const app = new Vue({
                     if (!employee.id || employee.id === "0") {
                         employee.id = result[0].id;
                     }
-                    this.saveRosterSchedules(employee);
+                    //this.saveRosterSchedules(employee);
                 }
             })
 
         },
         deleteRosterEmployee: function(id) {
             let url = `deleterosteremployee.php?id=${id}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
         },
-        saveRosterSchedules: function(employee) {
-            for(let schedule of employee.schedules) {
-                if (schedule.isDirty) {
-                    if (schedule.shiftstring) {
-                        this.saveRosterSchedule(employee.id, schedule);
-                    } else {
-                        if (parseInt(schedule.id) > 0) {
-                            this.deleteEmployeeSchedule(schedule.id);
+        saveRosterSchedules: function() {
+            let promises = [];
+            for(let employee of this.employees) {
+                for(let schedule of employee.schedules) {
+                    if (schedule.isDirty) {
+                        if (schedule.shiftstring) {
+                            promises.push(this.saveRosterSchedule(employee.id, schedule));
+                        } else {
+                            if (parseInt(schedule.id) > 0) {
+                                promises.push(this.deleteEmployeeSchedule(schedule.id));
+                            }
                         }
                     }
                 }
             }
+            return promises;
         },
-        saveRosterSchedule(rosterempid, schedule) {
-            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURI(schedule.shiftstring)}`;
-            //console.log(`For rosterempid: ${rosterempid}, the url is ${url}`);
-            fetch(url)
+        saveRosterSchedule: function(rosterempid, schedule) {
+            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURIComponent(schedule.getFullShiftString())}&locid1=${schedule.firstShift.location}`;
+            if (schedule.secondShift) {
+                url += `&locid2=${schedule.secondShift.location}`;
+            }
+            return fetch(url)
             .then(response => response.json())
             .then(id => {
                 if (id) {
                     schedule.id = id
                     schedule.isDirty = false;
                 }
-            })
+            });
         },
         deleteEmployeeSchedule: function(id) {
             let url = `deleteemployeeschedule.php?id=${id}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
         },
@@ -2483,6 +2557,7 @@ const app = new Vue({
         removeSchedules: function() {
             for(let employee of this.employees) {
                 for(let schedule of employee.schedules) {
+                    //if (schedule.shiftstring && schedule.rosterID === this.roster.id) { //This restricts the deletion to only shfits created in this roster
                     if (schedule.shiftstring) {
                         schedule.id = 0;
                         schedule.shiftstring = '';
@@ -2547,10 +2622,18 @@ const app = new Vue({
         },
         extractPositions: function(positionsarray) {
             this.positions = [];
+            this.patternpositions = [];
             for(let i = 0; i < positionsarray.length; i++) {
-                this.positions.push(positionsarray[i].position);
+                let position = positionsarray[i].position;
+                this.positions.push(position);
+                if (position.includes(' ')) {
+                    let parts = position.split(' ');
+                    this.patternpositions.push(parts[1]);
+                } else {
+                    this.patternpositions.push(position);
+                }
             }
-            patterns.position = patterns.position.replace('~', this.positions.join('|'));
+            patterns.position = patterns.position.replace('~', this.patternpositions.join('|'));
         },
         modalOKClicked: function(event) {
             if (this.validate()) {
@@ -2610,6 +2693,7 @@ const app = new Vue({
                 this.removeEmployee(this.deletedemployees, employee);
             }
             this.editEmployeeIndex = -1;
+            //needs to load schedules for selected employee
             this.updatestats();
         },
         enterShifts: function(data) {
@@ -2708,7 +2792,7 @@ const app = new Vue({
         },
         save: function() {
             //console.log('Save roster');
-            this.saveRoster();
+            this.saveRoster(false, true);
         },
         menuoption_new: function() {
             //reset the data options
@@ -2726,6 +2810,7 @@ const app = new Vue({
             this.nomissingcells = 0;
             this.noinvalidcells = 0;
             this.totalhours = 0;
+            this.loanedhours = 0;
             this.agreedhours = 0;
             this.deletedemployees = [];
             this.deletedEmployeeIDs = [];
