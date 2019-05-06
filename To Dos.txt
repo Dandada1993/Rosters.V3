@@ -26,6 +26,8 @@ Ability to mark Bank Holidays
 
 Modify shift dialog so that available hours are linked to the opening hours of the restaurant
 
+When location is set on string string or changed via menu need to validate that the hours are valid for the given location. Mark cells as requiring attention and set the tooltip if the hours are not valid for the restaurant.
+
 Load excuse code dynamically (done)
 	change context menu to use dynamically loaded excuse codes (done)
 	change excuse code regex to use dynamically loaded excuse codes (done)
@@ -93,12 +95,34 @@ Show warning when shift is over maximum hours (done)
 
 Add tooltip to hours (done)
 
-Add confirmation when roster saved
-	saveRosterEmployee
-	SaveRosterSchedules
+Add confirmation when roster saved (done)
 
 Add confirmation when roster exported to Acumen (done)
 
+Add notifications (somehow). Maybe via sending automated emails via Lotus Notes.
+
+Add menu option to copy roster link to clipboard until the emailing functionality is working.
+
+When listing times list 12:00AM as midnight and 12:00PM and midday (or noon)
+
+			|	shift 1			|	shift 2
+-------------------------------------------------------------
+start 		|opening - buffer	| shift 1 end
+--------------------------------------------------------------
+default		|clsoing + buffer	| start + 8 hours - shift1 length
+end			|					| limited by closing 
+--------------------------------| + buffer
+end after	|start + 8 hours	| 
+start 		|limited by closing	| 
+selected	|+ buffer			| 
+		
+In timeentry change start and end to moments. Times would then be array of every half hours moment between start and end. The select display will be the time portion (hh:mma) except for midnight and noon.
+Return the selected value as the moment. Change database so that shiftbuffer can be different for start and end of opening hours.
+
+When a time is entered without the timeentry dialog it need to be validated against the opening hours of the location the shift is at.
+
+When a location is changes via the menu the times listed for the shift need to be validated against the opening hours of the new location.
+		
 Issues:
 =======
 When shift cut and pasted the location and default position are not showing in the shift dialog (fixed)
@@ -137,6 +161,29 @@ OFF Requested shifts not saving to PayExceptions (done)
 Need to be able to roster persons at TRA (done)
 
 Test deleting employee from roster and it saving to the database.
+
+Load schedules for inserted employees
+	Every saved schedule with full shift string (done)
+	Need to save locID with schedule. May need to facilitate locID1 and locID2 is case a split shit is at two different branches (done)
+	Need to return employees ssociated with the roster but also employees that have shifts at the branch. Finished attempting to edit roster.cp_getrosteremployees to account for this.
+	Return roster.id with saved schedules (done)
+	If shift's roster.id does not match the roster.id of the current shown roster make the cell read only and do not include in the hours. If you decide to make the cell editable what happens to the rosterID when the shift is saved?
+	Separate loaned hours from total hours as loaned hours do not contribute to the branches weekly hours (done).
+	Should support be added for specifying a loan shift as @locID or 'D @locID' to specify a day schedule @locID? Specify a loan but not hours.
+	Should we prevent the final print of a roster until the hours have been exported to Acumen. Maybe until then anytime it's printed the word DRAFT appears on printed copy?
+	If the roster has not been saved where we pull from the data on Common we still need to include shifts from other rosters at the branch except for (grd and mm) (done)
+	
+Roster report that it saved successfully when it did not (done).
+
+Schedules with qualifiers e.g. #REST seem to lose the # symbol when format('short') is called (done).
+
+Visiting employee from another branch was saved as local employee and hence appeared twice when roster was reloaded (done).
+
+When deleting all shifts (or a single shift) if that employee is visiting and the visiting location has already exported the roster to Acumen then ask the user to confirm whether to delete that shift.
+
+When deleting all shifts (or a single shift) if the employee is on loan and the loaned location has already exported their roster to Acumen then ask the user to confirm whether to delete that shift.
+
+Loaned hours not to be substracted for GRD and MM (done)
 
 Algorithm for Saving Roster
 ===========================
@@ -191,3 +238,22 @@ Change default position to the BARN equivalent before entering any shifts
 ======================
 Terminate maintenance persons who are no longer with us
 Remove the Maintenance group and department from the manager security ids
+======================
+save (done)
+saveRoster (save)
+loadRoster 
+completeRosterSave (save)
+saveRosterEmployees (done)
+saveRosterEmployee (done)
+saveRosterSchedules (done)
+saveRosterSchedule (done)
+removeDeletedRosterEmployees (done)
+deleteRosterEmployee (done)
+deleteEmployeeSchedule (done)
+
+=====================
+employeeSelected
+loadRosterSchedules
+showSavedEmployeeSchedule
+
+saverosterschedule.php?rosterEmpID=689&date=2019-05-08&shiftstring=9AM-4PM%20%40AIR%20%23REST%20CR&locid1=AIR

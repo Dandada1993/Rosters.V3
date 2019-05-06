@@ -576,10 +576,14 @@ function Schedule(date) {
             showposition: true
         }
         this.setShifts();
-        if (this.secondShift) {
-            return `${this.firstShift.format('short', options)}/${this.secondShift.format('short', options)}`;
+        if (this.isExcuse()) {
+            return this.shiftstring;
         } else {
-            return this.firstShift.format('short', options);
+            if (this.secondShift) {
+                return `${this.firstShift.format('short', options)}/${this.secondShift.format('short', options)}`;
+            } else {
+                return this.firstShift.format('short', options);
+            }
         }
     }
 
@@ -2029,7 +2033,7 @@ const app = new Vue({
                     for(let schedule of employee.schedules) {
                         if (schedule.firstShift) {
                             let hours = schedule.firstShift.hours();
-                            if (schedule.firstShift.isOnLoan) {
+                            if (schedule.firstShift.isOnLoan && this.location.showloanedemployees === "1") {
                                 this.loanedhours += hours;
                             } else {
                                 this.totalhours += hours;
@@ -2037,7 +2041,7 @@ const app = new Vue({
                         }
                         if (schedule.secondShift) {
                             let hours = schedule.secondShift.hours();
-                            if (schedule.secondShift.isOnLoan) {
+                            if (schedule.secondShift.isOnLoan && this.location.showloanedemployees === "1") {
                                 this.loanedhours += hours;
                             } else {
                                 this.totalhours += hours;
@@ -2393,7 +2397,10 @@ const app = new Vue({
             return promises;
         },
         saveRosterSchedule: function(rosterempid, schedule) {
-            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURIComponent(schedule.getFullShiftString())}&locid1=${schedule.firstShift.location}`;
+            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURIComponent(schedule.getFullShiftString())}`;
+            if (schedule.firstShift) {
+                url += `&locid1=${schedule.firstShift.location}`;
+            }
             if (schedule.secondShift) {
                 url += `&locid2=${schedule.secondShift.location}`;
             }
