@@ -42,13 +42,23 @@
                                 <!-- </template> -->
                                 <li><a v-on:click="save">Save</a></li>
                                 <li class="divider"></li>
+                                <template v-if="location && location.autoApprove === '0'">
+                                    <li><a v-on:click="menuoption_printdraft">Print Draft</a></li>
+                                </template>
+                                <template v-if="location && location.autoApprove === '1'">
                                 <li><a v-on:click="menuoption_print">Print</a></li>
+                                </template>
                                 <template v-if="location && location.autoApprove === '0'">
                                     <li><a >Send for Approval</a></li>
                                     <li><a >Approve</a></li>
                                 </template>
                                 <li class="divider"></li>
-                                <li><a v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
+                                <template v-if="location && location.autoApprove === '1'">
+                                    <li><a v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
+                                </template>
+                                <template v-if="location && location.autoApprove === '0'">
+                                    <li><a v-on:click="menuoption_finalPrint">Final Print</a></li>
+                                </template>
                                 <!-- <li><a v-on:click="menuoption_test(location.locID)">Test</a></li> -->
                             </ul>
                         </li>
@@ -117,7 +127,8 @@
                             </tr>
                             <tr>
                                 <td class="data toolong">&nbsp;</td>
-                                <td class="title">Over {{location.maximumshift}} hours</td>
+                                <!-- <td class="title">Over {{location.maximumshift}} hours</td> -->
+                                <td class="title">Maybe invalid</td>
                                 <td class="data onloan" v-show="location.showloanedemployees === '1'">&nbsp;</td>
                                 <td class="title"  v-show="location.showloanedemployees === '1'">Employee on loan</td>
                             </tr>

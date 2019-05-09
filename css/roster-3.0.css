@@ -150,7 +150,8 @@ td.shift {
     background: pink;
 } */
 
-.toolong {
+.toolong,
+.ousidenormalhours {
     background: orange;
 }
 
@@ -325,6 +326,11 @@ td.position span {
 
 .dropdown-menu li a {
     cursor: default;
+}
+
+.isclosed {
+    text-align: center;
+    background: #EBEDEF;
 }
 
 @media print {

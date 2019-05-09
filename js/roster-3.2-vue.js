@@ -1,8 +1,76 @@
 let data = {
     employees: [],
     location: null,
+    locations: [],
     clipboard : '',
-    shortcuts: []
+    shortcuts: [],
+    openinghours: [],
+    getOpeningHours: function(locID, date) {
+        let weekday = parseInt(date.format('e')) + 1;
+        if (this.openinghours) {
+            for(let row of this.openinghours) {
+                if (row.locID === locID && row.weekday == weekday) {
+                    let is_open = false;
+                    let opening = null;
+                    let closing = null;
+                    if (row.is_open === '1') {
+                        is_open = true;
+                        opening = new moment(row.opening, 'YYYY-MM-DD HH:mm' );
+                        closing = new moment(row.closing, 'YYYY-MM-DD HH:mm');
+                    }
+                    return { is_open: is_open, opening: opening, closing: closing };
+                }
+            }
+        }
+        return null;
+    },
+    getMinimumShift: function(locID) {
+        for(let row of this.locations) {
+            if (row.locID === locID) {
+                return parseInt(row.minimumshift);
+            }
+        }
+        return 0;
+    },
+    getMaximumShift: function(locID) {
+        for(let row of this.locations) {
+            if (row.locID === locID) {
+                return parseInt(row.maximumshift);
+            }
+        }
+        return 0;
+    },
+    getStartShiftBuffer: function(locID) {
+        for(let row of this.locations) {
+            if (row.locID === locID) {
+                return parseInt(row.start_shiftbuffer);
+            }
+        }
+        return 0;
+    },
+    getEndShiftBuffer: function(locID) {
+        for(let row of this.locations) {
+            if (row.locID === locID) {
+                return parseInt(row.end_shiftbuffer);
+            }
+        }
+        return 0;
+    },
+    isOpen: function(locID, date) {
+        let weekday = parseInt(date.format('e')) + 1;
+        if (this.openinghours) {
+            for(let row of this.openinghours) {
+                if (row.locID === locID && row.weekday == weekday) {
+                    if (row.is_open === '1') {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }
 
 const EventBus = new Vue();
@@ -645,7 +713,7 @@ let rostershift = {
     template: `<input type="text"
                 spellcheck="false"
                 class="shift-input"  
-                :class="{missing :isEmpty, invalid :!isValid, tooshort :isTooShort, highlight :highlighted, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong}"
+                :class="{missing :isEmpty, invalid :!isValid, tooshort :isTooShort, highlight :highlighted, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong, ousidenormalhours: isOutsideOpeningHours}"
                 v-model="schedule.shiftstring"
                 v-on:focusin="handleFocusIn" 
                 v-on:focusout="$emit('focusout')"   
@@ -715,22 +783,35 @@ let rostershift = {
             }
             return false;
         },
+        isOutsideOpeningHours: function() {
+            if (data.location.showloanedemployees === '0') {
+                return false;
+            } else {
+                return this.isShiftOutsideOpeningHours(this.schedule.firstShift) || this.isShiftOutsideOpeningHours(this.schedule.secondShift);
+            }
+        },
         title: function() {
-            let result;
+            let result = '';
             if (this.isEmpty) {
                 result = 'Enter shift or excuse code';
             } else if (!Validator.isExcuse(this.schedule.shiftstring) && !Validator.validShifts(this.schedule.shiftstring)) {
                 result = 'Invalid shift';
             } else if (this.isTooShort) {
-                result = `Shift is shorter than ${data.location.minimumshift} hours`;
+                result = `Shift is shorter than ${data.getMinimumShift(this.schedule.firstShift.location)} hours`;
             } else if (this.isTooLong) {
-                result = `Shift is greater than ${data.location.maximumshift} hours`;
+                result = `Shift is greater than ${data.getMaximumShift(this.schedule.firstShift.location)} hours`;
             } else if (this.isOnLoan) {
                 result = `Employee on loan`;
             } else if (this.isVisiting) {
                 result = `Employee visiting from ${this.employee.defaultLocation.toUpperCase()}`;
             } else if (Validator.validShifts(this.schedule.shiftstring)) {
                 result = this.schedule.format('long', false);
+            }
+            if (this.isOutsideOpeningHours) {
+                if (result) {
+                    result += '\r\n';
+                }
+                result += `Hours selected are outside the normal operating hours for location(s)`;
             }
             return result;
         }
@@ -859,6 +940,17 @@ let rostershift = {
                 this.schedule.setShifts();
                 this.schedule.format('short');
             }
+        },
+        isShiftOutsideOpeningHours: function(shift) {
+            if (shift) {
+                let openinghours = data.getOpeningHours(shift.location, shift.date);
+                openinghours.opening.subtract(data.getStartShiftBuffer(shift.location), 'minute');
+                openinghours.closing.add(data.getEndShiftBuffer(shift.location), 'minute');
+                if (shift.starttime.diff(openinghours.opening) < 0 || shift.endtime.diff(openinghours.closing) > 0) {
+                    return true;
+                }
+            }
+            return false;
         }
     },
     mounted: function() {
@@ -897,14 +989,19 @@ let rostershiftcell = {
     template: `<td 
                 ref="child"
                 class="col shift" 
-                :class="{active :isActive}" >
-                    <rostershift 
-                        :schedule="schedule"
-                        :employee="employee"
-                        v-on:focusin="isActive = true" 
-                        v-on:cellchanged="emitUpdateHours"
-                        v-on:enter-shifts="emitEnterShift">
-                    </rostershift>
+                :class="{active :isActive, isclosed :!isOpen}" >
+                    <template v-if="isOpen">
+                        <rostershift 
+                            :schedule="schedule"
+                            :employee="employee"
+                            v-on:focusin="isActive = true" 
+                            v-on:cellchanged="emitUpdateHours"
+                            v-on:enter-shifts="emitEnterShift">
+                        </rostershift>
+                    </template>
+                    <template v-else>
+                        <span class="isclosed">{{schedule.shiftstring}}</span>
+                    </template>
                     <span v-if="schedule.firstShift" class="shift-read">{{schedule.formatFirstShift('short')}}</span>
                     <span v-if="schedule.secondShift" class="shift-read"><br></span>
                     <span v-if="schedule.secondShift" class="shift-read">{{schedule.formatSecondShift('short')}}</span>
@@ -934,6 +1031,9 @@ let rostershiftcell = {
         },
         col: function() {
             return parseInt(this.$el.getAttribute('data-col'));
+        },
+        isOpen: function() {
+            return data.isOpen(data.location.locID, this.schedule.date);
         }
     },
     methods: {
@@ -1229,32 +1329,39 @@ let rostersection = {
 let timeentry = {
     props: {
         value: String,
-        start: {
-            type: String,
-            default: '12:00 am'
-        }
+        start: moment,
+        end: moment
     }, 
     data: function() {
         return { 
                 times: [],
                 selectedvalue: this.value,
-                startindex: 0
+                valueindex: 0
             }
     },
     watch: {
         value: function(newVal) {
             this.selectedvalue = this.value;
         },
-        times: function(newVal) {
-            this.startindex = this.times.indexOf(this.start);
+        start: function(newVal, oldVal) {
+            if (!oldVal || newVal.diff(oldVal) !== 0) {
+                this.loadTimes();
+            }
+            // this.valueindex = this.times.indexOf(this.start);
         },
-        start: function(newVal) {
-            this.startindex = this.times.indexOf(this.start);
+        end: function(newVal, oldVal) {
+            if (!oldVal || newVal.diff(oldVal) !== 0) {
+                this.loadTimes();
+            }
+            // this.valueindex = this.times.indexOf(this.start);
         }
+        // locID: function() {
+        //     this.restrictHours();
+        // }
     },
     template: `<select class="form-control" v-model="selectedvalue" v-on:change="emitTimeChanged">
                     <option value="" disabled >Select time</option>
-                    <option v-for="(time, index) in times" :key="index" :value="time" v-if="index >= startindex">{{time}}</option>
+                    <option v-for="(time, index) in times" :key="index" :value="time">{{getDisplayedTime(time)}}</option>
                </select>`,
     methods: {
         emitTimeChanged: function() {
@@ -1262,26 +1369,44 @@ let timeentry = {
         },
         setStart: function(value) {
             this.start = value;
+        },
+        setValueIndex: function() {
+            this.valueindex = this.times.indexOf(this.selectedvalue);
+        },
+        addTime: function(time) {
+            this.times.push(time);
+        },
+        loadTimes: function() {
+            this.times = [];
+            if (this.start && this.end) {
+                let pDate = moment(this.start);
+                while (pDate.diff(this.end) < 0) {
+                    this.addTime(pDate.format('h:mm a'));
+                    pDate = pDate.add(30, 'm');
+                }
+            }
+            this.setValueIndex();
+        },
+        getDisplayedTime: function(time) {
+            let displayedtime = time;
+            switch(time) {
+                case "12:00 am":
+                    displayedtime = "Midnight";
+                    break;
+                case "12:00 pm":
+                    displayedtime = "Noon";
+            }
+            return displayedtime;
+        },
+        validIndex: function(index) {
+            if (index >= this.valueindex) {
+                return true;
+            }
+            return false;
         }
     },
     created: function() {
-        for(let i = 0; i < 48; i++) {
-            let suffix = 'am';
-            if (i >= 24) {
-                suffix = 'pm';
-            }
-            let minutes = '00';
-            let hour = i;
-            if (i % 2 === 1) {
-                minutes = '30';
-                hour = i - 1;
-            }
-            hour = (hour / 2) % 12;
-            if (hour === 0) {
-                hour = 12
-            }
-            this.times.push(`${hour}:${minutes} ${suffix}`);
-        }
+        this.loadTimes();
     }
 }
 
@@ -1304,7 +1429,11 @@ let shiftentry = {
                     }
                     return false;
                 }
-            }
+            },
+            starttimestart: null,
+            starttimeend: null,
+            endtimestart: null,
+            endtimeend: null
         }
     },
     components: {
@@ -1313,6 +1442,7 @@ let shiftentry = {
     watch: {
         locID: function(newVal, oldVal) {
             this.currentShift.location = newVal;
+            this.calculateAllTimes();
         },
         isSplit: function(newVal) {
             if (newVal) {
@@ -1345,6 +1475,13 @@ let shiftentry = {
                 shift = this.localSchedule.secondShift;
             }
             return shift;
+        },
+        previousShift: function() {
+            if (this.page === 1) {
+                return null
+            } else {
+                return this.localSchedule.firstShift;
+            }
         },
         currentPosition: {
             get: function() {
@@ -1407,11 +1544,23 @@ let shiftentry = {
                                 <div class="form-group row">
                                     <div class="col-xs-4" :class="{haserrors: errors.starttime}">
                                         <label for="starttime">Start Time<span v-show="errors.location"><strong>&nbsp;&#10033;</strong></span></label>
-                                        <timeentry ref="starttime" id="starttime" :value="gettime(currentShift.starttime)" v-on:time-changed="setStartTime"/>
+                                        <timeentry 
+                                            ref="starttime" 
+                                            id="starttime" 
+                                            :value="gettime(currentShift.starttime)" 
+                                            :start="starttimestart"
+                                            :end="starttimeend"
+                                            v-on:time-changed="setStartTime"/>
                                     </div>
                                     <div class="col-xs-4" :class="{haserrors: errors.endtime}">
                                         <label for="endtime">End Time<span v-show="errors.location"><strong>&nbsp;&#10033;</strong></span></label>
-                                        <timeentry ref="endtime" id="endtime" :value="gettime(currentShift.endtime)" :start="gettime(currentShift.starttime)" v-on:time-changed="setEndTime"/>
+                                        <timeentry 
+                                            ref="endtime" 
+                                            id="endtime" 
+                                            :value="gettime(currentShift.endtime)" 
+                                            :start="endtimestart" 
+                                            :end="endtimeend"
+                                            v-on:time-changed="setEndTime"/>
                                     </div>
                                     <div class="col-xs-4">
                                         <label for="hours">Hours</label>
@@ -1451,6 +1600,9 @@ let shiftentry = {
                     </div>
                 </div>`,
     methods: {
+        openingtimes: function() {
+            return data.getOpeningHours(this.locID, this.localSchedule.date);
+        },
         updateData: function(data) {
             this.localSchedule = this.createSchedule(data.schedule);
             this.locID = this.location.locID;
@@ -1512,6 +1664,9 @@ let shiftentry = {
             if (this.validate()) {
                 hideShiftEntryModal();
                 this.localSchedule.format('short');
+                if (this.localSchedule.shiftstring !== this.schedule.shiftstring) {
+                    this.schedule.isDirty = true;
+                }
                 this.schedule.shiftstring = this.localSchedule.shiftstring;
                 this.schedule.setShifts();
                 this.schedule.format('short');
@@ -1528,15 +1683,17 @@ let shiftentry = {
                 this.page = 2;
                 this.resetErrors();
                 this.validate();
+                this.calculateAllTimes();
             }
         },
         gotoPageOne: function() {
             //console.log('Go to page 1');
-            if (this.validate()) {
+            //if (this.validate()) {
                 this.page = 1;
                 this.resetErrors();
                 this.validate();
-            }
+                this.calculateAllTimes();
+            //}
         },
         resetErrors: function() {
             this.errors.starttime = false;
@@ -1554,6 +1711,7 @@ let shiftentry = {
             //console.log(`Start time: ${time}`);
             this.currentShift.starttime = new moment(`${this.schedule.date.format('YYYY-MM-DD')} ${time}`, 'YYYY-MM-DD h:mm a');
             this.isValidStartTime();
+            this.calculateEndTime();
         },
         setEndTime: function(time) {
             //console.log(`End time: ${time}`);
@@ -1599,11 +1757,74 @@ let shiftentry = {
         isValidRosteredAtLocation: function(target) {
             let regex = new RegExp(this.location.rosteredat, 'gi');
             return regex.test(target.type);
+        },
+        calculatePageOneStartTimeBegin: function() {
+            let adjustedopening = this.openingtimes().opening.subtract(data.getStartShiftBuffer(this.locID), 'minute');
+            this.starttimestart = adjustedopening;
+        },
+        calculatePageOneStartTimeEnd: function() {
+            this.starttimeend = this.openingtimes().closing.add(data.getEndShiftBuffer(this.locID), 'minute').subtract(data.getMinimumShift(this.locID), 'hour');
+        },
+        calculatePageOneEndTimeBegin: function() {
+            let adjustedopening = this.openingtimes().opening.subtract(data.getStartShiftBuffer(this.locID), 'minute').add(data.getMinimumShift(this.locID), 'hour');
+            this.endtimestart = adjustedopening;
+            if (this.localSchedule.firstShift.starttime) {
+                this.endtimestart = moment(this.localSchedule.firstShift.starttime).add(data.getMinimumShift(this.locID), 'hour');
+            }
+        },
+        calculatePageOneEndTimeEnd: function() {
+            this.endtimeend = this.openingtimes().closing.add(data.getEndShiftBuffer(this.locID), 'minute');
+            if (this.localSchedule.firstShift.starttime) {
+                return moment(this.localSchedule.firstShift.starttime).add(data.getMaximumShift(this.locID), 'hour');
+            }
+        },
+        calculatePageTwoStartTimeBegin: function() {
+            let adjustedopening = moment(this.localSchedule.firstShift.endtime).add(60, 'minute');
+            this.starttimestart = adjustedopening;
+        },
+        calculatePageTwoStartTimeEnd: function() {
+            this.starttimeend = this.openingtimes().closing.add(data.getEndShiftBuffer(this.locID), 'minute');
+        },
+        calculatePageTwoEndTimeBegin: function() {
+            let adjustedopening = moment(this.localSchedule.firstShift.endtime).add(60, 'minute');
+            this.endtimestart = adjustedopening;
+            // if (this.localSchedule.secondShift.starttime) {
+            //     this.endtimestart = moment(this.localSchedule.secondShift.starttime).add(data.getMinimumShift(this.locID), 'hour');
+            // }
+        },
+        calculatePagetwoEndTimeEnd: function() {
+            this.endtimeend = this.openingtimes().closing.add(data.getEndShiftBuffer(this.locID), 'minute');
+            if (this.localSchedule.secondShift.starttime) {
+                this.endtimeend = moment(this.localSchedule.secondShift.starttime).add(data.getMaximumShift(this.locID), 'h').substract(this.localSchedule.firstShift.hours(), 'hour');
+            }
+        },
+        calculateStartTime: function() {
+            if (this.page === 1) {
+                this.calculatePageOneStartTimeBegin();
+                this.calculatePageOneStartTimeEnd();
+            } else {
+                this.calculatePageTwoStartTimeBegin();
+                this.calculatePageTwoStartTimeEnd();
+            }
+        },
+        calculateEndTime: function() {
+            if (this.page === 1) {
+                this.calculatePageOneEndTimeBegin();
+                this.calculatePageOneEndTimeEnd();
+            } else {
+                this.calculatePageTwoEndTimeBegin();
+                this.calculatePageTwoEndTimeEnd();
+            }
+        },
+        calculateAllTimes: function() {
+            this.calculateStartTime();
+            this.calculateEndTime();
         }
     },
     mounted () {
         EventBus.$on('SHOW-SHIFTENTRYMODAL', (data) => {
           this.updateData(data);
+          this.calculateAllTimes();
         })
     }
 }
@@ -1720,7 +1941,7 @@ let selectemployee = {
             return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no})`;
         },
         fullnamenumberandposition: function(employee) {
-            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no}) (${employee.defaultPosition})`;
+            return `${employee.emp_fname} ${employee.emp_lname} (${employee.emp_no}) (${employee.position})`;
         },
         matchesSearch: function(employee) {
             let fullname = this.fullname(employee);
@@ -1917,6 +2138,7 @@ const app = new Vue({
         },
         location: function(newval){
             if (newval) {
+                this.loadOpeningHours();
                 this.loadPositionQualifiers();
                 this.loadRoster();
                 this.loadEmployees();
@@ -2119,6 +2341,10 @@ const app = new Vue({
             schedule.defaultQualifier = employee.defaultQualifier;
             schedule.defaultPosition = employee.defaultPosition;
             schedule.isDirty = false;
+            if (!data.isOpen(data.location.locID, schedule.date)) {
+                schedule.shiftstring = 'OFF';
+                schedule.isDirty = true;
+            }
             return schedule;
         },
         createSchedules: function(employee) {
@@ -2290,6 +2516,14 @@ const app = new Vue({
             .then(results => {
                 this.approvedrosters = results;
             });
+        },
+        loadOpeningHours: function() {
+            let url = `getopeninghours.php?weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            fetch(url)
+            .then(response => response.json())
+            .then(results => {
+                data.openinghours = results;
+            })
         },
         saveRoster: function(exportToAcumen = false, confirm = false) {
             let url = `saveroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
@@ -2538,6 +2772,11 @@ const app = new Vue({
                 this.exportToAcumen();
             }
         },
+        menuoption_finalPrint: function() {
+            //export to acumen
+            //set finalprint flag === 1, this will report the DRAFT overlay
+            //print the roster
+        },
         menuoption_copyFrom: function() {
             /* This cannot be done if the roster has been approved or exported to acumen*/
             /* confirm with user that any existing shifts will be deleted */
@@ -2605,6 +2844,9 @@ const app = new Vue({
             this.exportToAcumen();
         },
         menuoption_print: function() {
+            window.print();
+        },
+        menuoption_printdraft: function() {
             window.print();
         },
         menuoption_deleteAllShifts: function() {
@@ -2851,6 +3093,7 @@ const app = new Vue({
         .then(response => response.json())
         .then(json => {
             this.locations = json;
+            data.locations = json;
         });
         let vm = this;
         window.setInterval(function() { 
