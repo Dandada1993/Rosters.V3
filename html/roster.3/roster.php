@@ -67,9 +67,9 @@
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a >Cut</a></li>
-                                <li><a >Copy</a></li>
-                                <li><a >Paste</a></li>
+                                <li><a v-on:click="menuoption_cut">Cut</a></li>
+                                <li><a v-on:click="menuoption_copy">Copy</a></li>
+                                <li><a v-on:click="menuoption_paste">Paste</a></li>
                                 <li class="divider"></li>
                                 <li><a v-on:click="menuoption_deleteAllShifts">Delete All</a></li>
                                 <li class="divider"></li>
@@ -224,6 +224,12 @@
                     </table>
                 </div>
             </div>
+        </div>
+        <div id="locationlegend" v-if="location && location.showlocationlegend === '1'">
+            <div><strong>Location&nbsp;Codes</strong></div>
+            <span v-for="entry in locations" v-if="entry.type !== 'O' && entry.type !== 'C'">
+            &#64;{{entry.locID}}&nbsp;-&nbsp;{{entry.name}}
+            </span>
         </div>
         <div ref="selectLocations-dialog" id="selectLocations-dialog" class="modal fade" tabindex=-1 role="dialog">
             <div class="modal-dialog" role="document">

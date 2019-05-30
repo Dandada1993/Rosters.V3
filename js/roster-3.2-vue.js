@@ -24,6 +24,14 @@ let data = {
         }
         return null;
     },
+    getBreakLength: function(locID) {
+        for(let row of this.locations) {
+            if (row.locID === locID) {
+                return parseInt(row.breaklength);
+            }
+        }
+        return 0;
+    },
     getMinimumShift: function(locID) {
         for(let row of this.locations) {
             if (row.locID === locID) {
@@ -356,7 +364,7 @@ function Shift(date, shift = '') {
         if (this.starttime && this.endtime) {
             let minutes = this.endtime.diff(this.starttime, 'minutes');
             if (minutes > parseInt(data.location.minimumforbreak)) {
-                minutes -= parseInt(data.location.breaklength);
+                minutes -= data.getBreakLength(this.location); //parseInt(data.location.breaklength);
             }
             return minutes/60;
         }
@@ -716,7 +724,7 @@ let rostershift = {
                 :class="{missing :isEmpty, invalid :!isValid, tooshort :isTooShort, highlight :highlighted, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong, ousidenormalhours: isOutsideOpeningHours}"
                 v-model="schedule.shiftstring"
                 v-on:focusin="handleFocusIn" 
-                v-on:focusout="$emit('focusout')"   
+                v-on:focusout="handleFocusOut"   
                 v-on:change="valueChanged()"
                 v-on:keyup.enter="valueChanged()"
                 v-on:dblclick="emitEnterShift(schedule)"
@@ -750,12 +758,14 @@ let rostershift = {
             return parseInt(this.$parent.$el.getAttribute('data-col'));
         },
         isTooLong: function() {
+            //The following check is incorrect. The maximumshift should not be checked against the data.location but the schedule.firstShift.location
             if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > parseFloat(data.location.maximumshift)) {
                 return true;
             }
             return false;
         },
         isTooShort: function() {
+            //The following check is incorrect. The maximumshift should not be checked against the data.location but the schedule.firstShift.location
             if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < parseFloat(data.location.minimumshift)) {
                 return true;
             }
@@ -797,9 +807,13 @@ let rostershift = {
             } else if (!Validator.isExcuse(this.schedule.shiftstring) && !Validator.validShifts(this.schedule.shiftstring)) {
                 result = 'Invalid shift';
             } else if (this.isTooShort) {
-                result = `Shift is shorter than ${data.getMinimumShift(this.schedule.firstShift.location)} hours`;
+                if (this.schedule.firstShift) {
+                    result = `Shift is shorter than ${data.getMinimumShift(this.schedule.firstShift.location)} hours`;
+                }
             } else if (this.isTooLong) {
-                result = `Shift is greater than ${data.getMaximumShift(this.schedule.firstShift.location)} hours`;
+                if (this.schedule.firstShift) {
+                    result = `Shift is greater than ${data.getMaximumShift(this.schedule.firstShift.location)} hours`;
+                }
             } else if (this.isOnLoan) {
                 result = `Employee on loan`;
             } else if (this.isVisiting) {
@@ -871,24 +885,40 @@ let rostershift = {
             this.$emit('focusin');
             EventBus.$emit('TOOK-FOCUS', {row: this.row, column: this.col});
         },
+        handleFocusOut: function(event) {
+            this.$emit('focusout');
+        },
         cut: function() {
             let copyText = this.$el; 
             copyText.select();
             if (document.execCommand("cut")) {
                 this.valueChanged();
             }
+            data.clipboard = this.schedule.shiftstring;
         },
         copy: function() {
+            //each highlighted cell receives the CONTEXTMENU-SELECTIOn event and execute the command independently.
+            //To implement multicell copy each hightlighted cell would have to return it's row, column and shiftstring
+            //The main view instance would have to store these value in order of row, column value separated by a TAB
+            //in a hidden input field. And then execute a copy of that hidden text field
             let copyText = this.$el; 
             copyText.select();
             document.execCommand("copy");
+            data.clipboard = this.schedule.shiftstring;
         },
         paste: function() {
-            navigator.clipboard.readText().then(clipText =>
-            {
-                this.schedule.shiftstring = clipText;
-                this.valueChanged();
-            });
+            if (navigator.clipboard) {
+                navigator.clipboard.readText().then(clipText =>
+                {
+                    this.schedule.shiftstring = clipText;
+                    this.valueChanged();
+                });
+            } else {
+                if (data.clipboard) {
+                    this.schedule.shiftstring = data.clipboard;
+                    this.valueChanged();
+                    }
+            }
         },
         contextMenuClicked: function(invokedOn, selectedMenu) {
             let action = selectedMenu.text();
@@ -944,6 +974,9 @@ let rostershift = {
         isShiftOutsideOpeningHours: function(shift) {
             if (shift) {
                 let openinghours = data.getOpeningHours(shift.location, shift.date);
+                if (!openinghours.is_open) {
+                    return true;
+                }
                 openinghours.opening.subtract(data.getStartShiftBuffer(shift.location), 'minute');
                 openinghours.closing.add(data.getEndShiftBuffer(shift.location), 'minute');
                 if (shift.starttime.diff(openinghours.opening) < 0 || shift.endtime.diff(openinghours.closing) > 0) {
@@ -980,6 +1013,11 @@ let rostershift = {
         });
         EventBus.$on('SET-EXCUSECODE', (code) => {
             this.onSetExcuseCode(code);
+        });
+        EventBus.$on('MENUOPTION-SELECTION', (action) => {
+            if (this.highlighted || this.$parent.isActive) {
+                this.performContextMenuAction(action);
+            }
         })
     }
 }
@@ -2138,20 +2176,23 @@ const app = new Vue({
         },
         location: function(newval){
             if (newval) {
-                this.loadOpeningHours();
-                this.loadPositionQualifiers();
-                this.loadRoster();
-                this.loadEmployees();
-                //this.loadRosterSchedules();
-                this.loadSections();
-                this.loadAllocatedHours();
-                this.loadPositions();
-                this.loadOtherEmployees();
-                this.loadLocationsQualifiers();
-                this.loadExcuseCodes();
-                this.loadShortcuts();
-                this.loadApprovedRosters();
-                document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
+                data.location = newval;
+                let openinghours = this.loadOpeningHours();
+                let positionqualifiers = this.loadPositionQualifiers();
+                let roster = this.loadRoster();
+                let sections = this.loadSections();
+                let allocatedhours = this.loadAllocatedHours();
+                let positions = this.loadPositions();
+                let otheremployees = this.loadOtherEmployees();
+                let locationqualifiers = this.loadLocationsQualifiers();
+                let excusecodes = this.loadExcuseCodes();
+                let shortcuts = this.loadShortcuts();
+                let approvedrosters = this.loadApprovedRosters();
+                Promise.all([openinghours, positionqualifiers, roster, sections, allocatedhours, positions, otheremployees, locationqualifiers, excusecodes, shortcuts, approvedrosters])
+                .then(() => {
+                    this.loadEmployees();
+                    document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
+                });
             }
         },
         employees: function(newval, oldval) {
@@ -2341,7 +2382,7 @@ const app = new Vue({
             schedule.defaultQualifier = employee.defaultQualifier;
             schedule.defaultPosition = employee.defaultPosition;
             schedule.isDirty = false;
-            if (!data.isOpen(data.location.locID, schedule.date)) {
+            if (!data.isOpen(this.location.locID, schedule.date)) {
                 schedule.shiftstring = 'OFF';
                 schedule.isDirty = true;
             }
@@ -2414,7 +2455,7 @@ const app = new Vue({
         },
         loadSections: function() {
             let url = `getsections.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(json => {
                 this.sections = json;
@@ -2431,7 +2472,7 @@ const app = new Vue({
         },
         loadPositionQualifiers: function() {
             let url = `getpositionqualifiers.php?locID=${this.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(json => {
                 this.positionQualifiers = json;
@@ -2439,7 +2480,7 @@ const app = new Vue({
         },
         loadAllocatedHours: function() {
             let url = `getallocatedhours.php?locID=${this.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(json => {
                 this.agreedhours = parseFloat(json[0].allocatedhours); //json;
@@ -2447,7 +2488,7 @@ const app = new Vue({
         },
         loadPositions: function() {
             let url = `getpositions.php?locID=${this.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(json => {
                 this.extractPositions(json);
@@ -2455,7 +2496,7 @@ const app = new Vue({
         },
         loadOtherEmployees: function() {
             let url = `getotheremployees.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(json => {
                 if (json) {
@@ -2465,7 +2506,7 @@ const app = new Vue({
         },
         loadLocationsQualifiers: function() {
             let url = `getlocationsqualifiers.php?weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(json => {
                 if (json) {
@@ -2495,7 +2536,7 @@ const app = new Vue({
         },
         loadExcuseCodes: function() {
             let url = 'getexcusecodes.php';
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(results => {
                 this.excusecodes = results;
@@ -2503,7 +2544,7 @@ const app = new Vue({
         },
         loadShortcuts: function() {
             let url = `getshortcuts.php?locID=${this.location.locID}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(results => {
                 data.shortcuts = results;
@@ -2511,7 +2552,7 @@ const app = new Vue({
         },
         loadApprovedRosters: function() {
             let url = `getapprovedrosters.php?locID=${this.location.locID}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(results => {
                 this.approvedrosters = results;
@@ -2519,7 +2560,7 @@ const app = new Vue({
         },
         loadOpeningHours: function() {
             let url = `getopeninghours.php?weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
-            fetch(url)
+            return fetch(url)
             .then(response => response.json())
             .then(results => {
                 data.openinghours = results;
@@ -2854,6 +2895,18 @@ const app = new Vue({
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.deleteAllShifts);
             $(this.$refs.deleteSchedulesDialog.$el).modal('show');
         },
+        actionMenuOption: function(action) {
+            EventBus.$emit('MENUOPTION-SELECTION', action);
+        },
+        menuoption_cut: function() {
+            this.actionMenuOption('cut');
+        },
+        menuoption_copy: function() {
+            this.actionMenuOption('copy');
+        },
+        menuoption_paste: function() {
+            this.actionMenuOption('paste');
+        },
         deleteAllShifts: function() {
             $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
@@ -2899,7 +2952,6 @@ const app = new Vue({
         setLocation: function() {
             if (this.locID && this.weekending) {
                 this.location = this.getLocation(this.locID);
-                data.location = this.location;
             }
         },
         getLocation: function(locid) {

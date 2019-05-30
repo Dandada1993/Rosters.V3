@@ -333,6 +333,10 @@ td.position span {
     background: #EBEDEF;
 }
 
+#locationlegend {
+    display: none;
+}
+
 @media print {
     .rowheader,
     .position,
@@ -346,13 +350,45 @@ td.position span {
         display: none;
     }
 
+    body { 
+        padding-top: 0px; 
+    }
+
+    #top {
+        margin-bottom: 5px;
+    }
+
+    .table-bordered>tbody>tr>td, 
+    .table-bordered>tbody>tr>th, 
+    .table-bordered>tfoot>tr>td, 
+    .table-bordered>tfoot>tr>th, 
+    .table-bordered>thead>tr>td, 
+    .table-bordered>thead>tr>th {
+        border: 1px solid black !important; 
+    }
+
+    td {
+        border: 1px solid black;
+    }
+
     .shortname {
         display: inline;
+        text-transform: uppercase;
+        font-size: 1.3rem;
+    }
+
+    .shift {
+        text-align: center;
+    }
+
+    .name:not(.header) {
+        font-size: 1.2rem;
     }
 
     .shift-read {
         display: inline;
-        font-size: 1.2rem;
+        font-size: 1rem;
+        text-align: center;
     }
 
     .rosterrow {
@@ -368,5 +404,18 @@ td.position span {
 
     h2 {
         font-size: 20px;
+    }
+
+    #locationlegend {
+        display: block;
+        margin-top: 20px;
+        border: 1px solid black;
+        padding: 3px;
+    }
+
+    #locationlegend span {
+        display: inline-block;
+        width:20%;
+        font-size: 1rem;
     }
 }
