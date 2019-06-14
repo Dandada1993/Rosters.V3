@@ -19,6 +19,10 @@
 <body>
     <textarea id="pastetext" style="display: none;" ></textarea>
     <div id="main">
+        <div 
+            v-if="location && location.autoApprove === '0' && showdrafttext"
+            :class="{ drafttext: showdrafttext }"
+        >DRAFT</div>
         <?php
             echo "<input type=\"text\" id=\"locID\" value=\"$locID\" style=\"display: none;\"/>";
             echo "<input type=\"text\" id=\"weekending\" value=\"$weekending\" style=\"display: none;\"/>";
@@ -38,7 +42,7 @@
                                 <!-- <template v-if="roster"> -->
                                 <li><a v-on:click="menuoption_new">New</a></li>
                                 <li class="divider"></li>
-                                <li :disabled="!roster || roster.exportedToAcumen === '1'" v-on:click="menuoption_copyFrom"><a >Copy From</a></li>
+                                <li :class="{disabled: exportedToAcumen}" v-on:click="menuoption_copyFrom"><a >Copy From</a></li>
                                 <!-- </template> -->
                                 <li><a v-on:click="save">Save</a></li>
                                 <li class="divider"></li>
@@ -49,15 +53,15 @@
                                 <li><a v-on:click="menuoption_print">Print</a></li>
                                 </template>
                                 <template v-if="location && location.autoApprove === '0'">
-                                    <li><a >Send for Approval</a></li>
-                                    <li><a >Approve</a></li>
+                                    <!-- <li><a >Send for Approval</a></li> -->
+                                    <li><a v-on:click="menuoption_approve">Approve</a></li>
                                 </template>
                                 <li class="divider"></li>
                                 <template v-if="location && location.autoApprove === '1'">
-                                    <li><a v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
+                                    <li :class="{disabled: exportedToAcumen}"><a v-on:click="menuoption_exportToAcumen">Export to Acumen</a></li>
                                 </template>
                                 <template v-if="location && location.autoApprove === '0'">
-                                    <li><a v-on:click="menuoption_finalPrint">Final Print</a></li>
+                                    <li :class="{disabled: !exportedToAcumen}"><a v-on:click="menuoption_finalPrint">Final Print</a></li>
                                 </template>
                                 <!-- <li><a v-on:click="menuoption_test(location.locID)">Test</a></li> -->
                             </ul>
@@ -104,7 +108,8 @@
                             <ul class="dropdown-menu">
                                 <li><a >Documentation</a></li>
                                 <li><a href="tipstricks.html" target="_blank">Tips and Tricks</a></li>
-                                <li><a >Show Shortcuts</a></li>
+                                <li><a v-on:click="menuoption_shortcuts">Show Shortcuts</a></li>
+                                <li><a v-on:click="menuoption_showStats">Roster Stats</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -188,22 +193,24 @@
                     </table>
                 <!-- </div> -->
             </div>
-            <div class="row">
-                <div is="rostersection" 
-                    class="section table-responsive" 
-                    v-for="(section, index) in sections" 
-                    :section="section" 
-                    :employees="employees"
-                    :positions="positions"
-                    :qualifiers="getQualifiers(section.defaultPosition)"
-                    :key="index" 
-                    v-on:hours-updated="hoursUpdated()"
-                    v-on:add-employee="addEmployee"
-                    v-on:delete-employee="deleteEmployee"
-                    v-on:select-employee="selectEmployee"
-                    v-on:enter-shifts="enterShifts">
+            <template v-if="schedulesloaded">
+                <div class="row">
+                    <div is="rostersection" 
+                        class="section table-responsive" 
+                        v-for="(section, index) in sections" 
+                        :section="section" 
+                        :employees="employees"
+                        :positions="positions"
+                        :qualifiers="getQualifiers(section.defaultPosition)"
+                        :key="index" 
+                        v-on:hours-updated="hoursUpdated()"
+                        v-on:add-employee="addEmployee"
+                        v-on:delete-employee="deleteEmployee"
+                        v-on:select-employee="selectEmployee"
+                        v-on:enter-shifts="enterShifts">
+                    </div>
                 </div>
-            </div>
+            </template>
             <div class="col-md-12 rostertotals">
                 <div class="row">
                     <table>
@@ -281,7 +288,7 @@
                 </div>
             </template>
             <template slot="btn_ok">
-                <button type="button" class="btn btn-primary" v-on:click="missingCellsModalOKClicked">Proceed</button>
+                <button id="missingCellsDialogOKButton" type="button" class="btn btn-primary" >Proceed</button>
             </template>
         </div>
         <div is="selectemployee"
@@ -329,6 +336,81 @@
             </template>
         </div>
         <div ref="maximumHoursExceededDialog" is="maxhoursexceeded" :hours="hoursexceeded" :shiftstring="hoursexceeded_shiftstring" :cell="hoursexceeded_cell"></div>
+        <div ref="confirmApproval" 
+            is="genericdialog"
+            show-cancel
+            handle="confirm-export"
+            title="Export shifts to Acumen">
+            <template slot="body">
+                <div class="form-group">
+                    <p >Approving the roster will cause all shifts to be exported to Acumen.</p>
+                    <p>Are you sure you want to continue?</p>
+                </div>
+            </template>
+            <template slot="btn_ok">
+                <button id="confirmApproval_OkButton" type="button" class="btn btn-primary">Proceed</button>
+            </template>
+        </div>
+        <div ref="shortcutsDialog" 
+            is="genericdialog"
+            show-cancel
+            handle="shortcut-dialog"
+            title="List of shortscut">
+            <template slot="body">
+                <div class="form-group">
+                    <table id="shortcuts">
+                        <thead>
+                            <tr>
+                                <th>Shortcut</th>
+                                <th>For</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-for="shortcut in shortcuts">
+                                <tr>
+                                    <td>{{shortcut.shortcut}}</td>
+                                    <td>{{shortcut.replacement}}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+        <div ref="showstats" 
+            is="genericdialog"
+            show-cancel
+            handle="show-stats"
+            title="Roster Stats">
+            <template slot="body">
+                <div class="form-group">
+                    <table id="rosterstats">
+                        <tbody>
+                            <tr>
+                                <td>No. of employees</td>
+                                <td>{{noemployees}}</td>
+                            </tr>
+                            <tr>
+                                <td>No. of shifts</td>
+                                <td>{{noshifts}}</td>
+                            </tr>
+                            <tr>
+                                <td>No. of excuse codes</td>
+                                <td>{{noexcusecodes}}</td>
+                            </tr>
+                            <tr>
+                                <td>No. of missing cells</td>
+                                <td>{{nomissingcells}}</td>
+                            </tr>
+                            <tr>
+                                <td>No. of invalid cells</td>
+                                <td>{{noinvalidcells}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
         <ul ref="contextMenu" id="contextMenu" class="dropdown-menu" role="menu" style="display:none" >
             <li><a tabindex="-1">Cut</a></li>
             <li><a tabindex="-1">Copy</a></li>

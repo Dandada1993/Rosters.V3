@@ -32,7 +32,7 @@ Load excuse code dynamically (done)
 	change context menu to use dynamically loaded excuse codes (done)
 	change excuse code regex to use dynamically loaded excuse codes (done)
 
-Implement multicell cut, copy and paste
+Implement multicell cut, copy and paste. Seems like multicell copy and paste are separated by tabs.
 
 Implement Tooltip for cells when text is too long and for cells with errors (done).
 
@@ -116,9 +116,36 @@ Need to add position to list of employees (done)
 		
 Disable shift entry if location is closed on particular day (done).
 
-Export the roster to Acumen the final copy of the roster is printed. Any printing prior to this roster should show the DRAFT on the printed copy?
+Export the roster to Acumen the final copy of the roster is printed. Any printing prior to this roster should show the DRAFT on the printed copy? Can final print multiple times, if the roster has been saved after the export, delete the shifts in the WorkingSchedules and re-export. Maybe only export any shifts that have changed since the last roster save which would mean keeping track of the last time the shifts were saved. Require that the if autoApprove is set to 0 that the user has to explicitly approve the roster before it can be Final Printed. 
 
-Use Promise.all to ensure that all relevant data is loaded before employee and saved schedules are loaded.
+Use Promise.all to ensure that all relevant data is loaded before employee and saved schedules are loaded (completed)
+
+File->New option should prompt to save existing changes
+
+Need to implement Undo and Redo
+
+Test deleting shifts 
+
+Test deleting employees
+
+Add dialog box warning that final printing will export to Acumen
+
+Add option to mark remaining shifts as OFF
+
+Consider adding a flag that requires every shift to have an @LocID. This would be useful for the Guard rosters.
+
+Need to ensure that ExcuseCodes are not duplicated when exported from the Roster as they might already have been entered via the Calender in LabourView.
+
+12:30PM-5PM/6:30PM-10PM is 8 hours and not 7.5. No need to subtract a break for split shifts where one shift is over 4 hours (done).
+
+Searching saves the previous searched text.
+
+Changing default position is not being reflected in shifts.
+
+Roster total is incorrect.
+
+When the default position is changed e.g. from REST FC to BARN FC, the printed roster should be printed as though REST is the default qualifier as the default position is not shown on the printed roster.
+e.g. Default Position: BARN FC, shift "10:30a-5p" when printed should display as "10:30a-5p #BARN FC"
 
 Issues:
 =======
@@ -180,6 +207,16 @@ When deleting all shifts (or a single shift) if the employee is on loan and the 
 Loaned hours not to be substracted for GRD and MM (done)
 
 Split shifts with two different position are not displaying the correct shift string
+
+Paste not working getting the following error: (Paste is not supported unless https is used instead of http)
+Uncaught TypeError: Cannot read property 'readText' of undefined (roster-3.2-vue.js:806)
+    at a.paste (roster-3.2-vue.js:806)
+    at a.performContextMenuAction (roster-3.2-vue.js:824)
+    at a.contextMenuClicked (roster-3.2-vue.js:814)
+    at HTMLAnchorElement.<anonymous> (roster-3.2-vue.js:37)
+    at HTMLUListElement.dispatch (jquery-3.3.1.js:5183)
+    at HTMLUListElement.elemData.handle (jquery-3.3.1.js:4991)
+
 
 Algorithm for Saving Roster
 ===========================
@@ -253,3 +290,5 @@ loadRosterSchedules
 showSavedEmployeeSchedule
 
 saverosterschedule.php?rosterEmpID=689&date=2019-05-08&shiftstring=9AM-4PM%20%40AIR%20%23REST%20CR&locid1=AIR
+
+9AM-2PM This is a test

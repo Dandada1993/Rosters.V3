@@ -337,6 +337,20 @@ td.position span {
     display: none;
 }
 
+.drafttext {
+    display: none;
+}
+
+.showdrafttext {
+    display: none;
+}
+
+.readonly {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+
 @media print {
     .rowheader,
     .position,
@@ -417,5 +431,17 @@ td.position span {
         display: inline-block;
         width:20%;
         font-size: 1rem;
+    }
+
+    .drafttext {
+        display: block;
+        position: absolute;
+        font-size: 20rem;
+        color: #95A5A6;
+        top: 100px;
+        left: 0px;
+        text-align: center;
+        opacity: 0.5;
+        width: 100%;
     }
 }

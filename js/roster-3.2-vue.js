@@ -1,6 +1,7 @@
 let data = {
     employees: [],
     location: null,
+    roster: null,
     locations: [],
     clipboard : '',
     shortcuts: [],
@@ -17,6 +18,9 @@ let data = {
                         is_open = true;
                         opening = new moment(row.opening, 'YYYY-MM-DD HH:mm' );
                         closing = new moment(row.closing, 'YYYY-MM-DD HH:mm');
+                        if (row.nextday_closingtime) {
+                            closing.add(1, 'days');
+                        }
                     }
                     return { is_open: is_open, opening: opening, closing: closing };
                 }
@@ -360,11 +364,13 @@ function Shift(date, shift = '') {
         }
     }
 
-    this.hours = function(){
+    this.hours = function(deductbreak = true){
         if (this.starttime && this.endtime) {
             let minutes = this.endtime.diff(this.starttime, 'minutes');
             if (minutes > parseInt(data.location.minimumforbreak)) {
-                minutes -= data.getBreakLength(this.location); //parseInt(data.location.breaklength);
+                if (deductbreak) {
+                    minutes -= data.getBreakLength(this.location); //parseInt(data.location.breaklength);
+                }
             }
             return minutes/60;
         }
@@ -487,7 +493,10 @@ function Schedule(date) {
         return false;
     }
 
-    this.formatFirstShift = function(format) {
+    this.formatFirstShift = function(format, comparisonqualifier = null) {
+        if (!comparisonqualifier) {
+            comparisonqualifier = this.defaultQualifier;
+        }
         let firstShift_options = {};
         if (this.secondShift) {
             if (this.secondShift.location === this.firstShift.location) {
@@ -500,7 +509,7 @@ function Schedule(date) {
             if (this.secondShift.qualifier === this.firstShift.qualifier) {
                 firstShift_options.showqualifier = false;
             } else {
-                if (this.firstShift.qualifier !== this.defaultQualifier) {
+                if (this.firstShift.qualifier !== comparisonqualifier) { //if (this.firstShift.qualifier !== this.defaultQualifier) {
                     firstShift_options.showqualifier = true;
                 }
             }
@@ -515,7 +524,7 @@ function Schedule(date) {
             if (this.firstShift.location !== this.defaultLocation) {
                 firstShift_options.showlocation = true;
             }
-            if (this.firstShift.qualifier !== this.defaultQualifier) {
+            if (this.firstShift.qualifier !== comparisonqualifier) { //if (this.firstShift.qualifier !== this.defaultQualifier) {
                 firstShift_options.showqualifier = true;
             }
             if (this.firstShift.position !== this.defaultPosition) {
@@ -525,7 +534,10 @@ function Schedule(date) {
         return this.firstShift.format(format, firstShift_options);
     }
 
-    this.formatSecondShift = function(format) {
+    this.formatSecondShift = function(format, comparisonqualifier = null) {
+        if (!comparisonqualifier) {
+            comparisonqualifier = this.defaultQualifier;
+        }
         let secondShift_options = {};
         if (this.secondShift.location === this.firstShift.location) {
             if (this.secondShift.location === this.defaultLocation) {
@@ -540,14 +552,14 @@ function Schedule(date) {
             }
         }
         if (this.secondShift.qualifier === this.firstShift.qualifier) {
-            if (this.secondShift.qualifier === this.defaultQualifier) {
+            if (this.secondShift.qualifier === comparisonqualifier) { //if (this.secondShift.qualifier === this.defaultQualifier) {
                 secondShift_options.showqualifier = false;
             }
             else {
                 secondShift_options.showqualifier = true;
             }
         } else {
-            if (this.secondShift.qualifier !== this.defaultQualifier) {
+            if (this.secondShift.qualifier !== comparisonqualifier) { //if (this.secondShift.qualifier !== this.defaultQualifier) {
                 secondShift_options.showqualifier = true;
             }
         }
@@ -668,10 +680,11 @@ function Schedule(date) {
         if (Validator.isTimes(this.shiftstring)){
             // this.setShifts();
             if (this.firstShift) {
-                retval += this.firstShift.hours();
-            }
-            if (this.secondShift) {
-                retval += this.secondShift.hours();
+                if (this.secondShift) {
+                    retval = this.firstShift.hours(false) + this.secondShift.hours(false);
+                } else {
+                    retval = this.firstShift.hours();
+                }
             }
         }
         return retval;
@@ -838,6 +851,7 @@ let rostershift = {
                 }
             }
             if (this.isValid){
+                // this.schedule.shiftstring = this.schedule.shiftstring;
                 this.schedule.setShifts();
                 this.schedule.format("short");
                 if (this.schedule.hours() > data.location.maximumshift) {
@@ -1018,7 +1032,7 @@ let rostershift = {
             if (this.highlighted || this.$parent.isActive) {
                 this.performContextMenuAction(action);
             }
-        })
+        });
     }
 }
 
@@ -1028,7 +1042,7 @@ let rostershiftcell = {
                 ref="child"
                 class="col shift" 
                 :class="{active :isActive, isclosed :!isOpen}" >
-                    <template v-if="isOpen">
+                    <template v-if="allowEdit">
                         <rostershift 
                             :schedule="schedule"
                             :employee="employee"
@@ -1038,11 +1052,11 @@ let rostershiftcell = {
                         </rostershift>
                     </template>
                     <template v-else>
-                        <span class="isclosed">{{schedule.shiftstring}}</span>
+                        <span class="readonly" :class="{isclosed :!isOpen}">{{schedule.shiftstring}}</span>
                     </template>
-                    <span v-if="schedule.firstShift" class="shift-read">{{schedule.formatFirstShift('short')}}</span>
-                    <span v-if="schedule.secondShift" class="shift-read"><br></span>
-                    <span v-if="schedule.secondShift" class="shift-read">{{schedule.formatSecondShift('short')}}</span>
+                    <span v-if="schedule.firstShift" class="shift-read">{{schedule.formatFirstShift('short', 'REST')}}</span>
+                    <span v-if="schedule.secondShift" class="shift-read">/<br></span>
+                    <span v-if="schedule.secondShift" class="shift-read">{{schedule.formatSecondShift('short', 'REST')}}</span>
                     <span v-if="schedule.isExcuse()" class="shift-read">{{schedule.shiftstring}}</span>
                 </td>`,
     components: {
@@ -1072,6 +1086,14 @@ let rostershiftcell = {
         },
         isOpen: function() {
             return data.isOpen(data.location.locID, this.schedule.date);
+        },
+        allowEdit: function() {
+            //return this.isOpen && data.roster.exportedToAcumen === '0';
+            let exportedtoacumen = false;
+            if (data.roster && data.roster.exportedToAcumen === '1') {
+                exportedtoacumen = true;
+            }
+            return this.isOpen && !exportedtoacumen
         }
     },
     methods: {
@@ -1095,10 +1117,10 @@ let rostershiftcell = {
 }
 
 let positionselector = {
-    props: ['employee','positions','hasqualifier'],
+    props: ['employee','schedules','positions','hasqualifier'],
     template: `<td class="col position">
                     <template v-if="positions && positions.length > 1">
-                    <select v-model="selected">
+                    <select v-model="selected" tabindex="-1">
                         <option 
                             v-for="(position, index) in positions" 
                             :key="index"
@@ -1123,7 +1145,7 @@ let positionselector = {
             }else{
                 this.employee.defaultPosition = parts[0];
             }
-            for(let schedule of this.employee.schedules) {
+            for(let schedule of this.schedules) {
                 schedule.defaultQualifier = this.employee.defaultQualifier;
                 schedule.defaultPosition = this.employee.defaultPosition;
                 if (schedule.shiftstring) {
@@ -1147,7 +1169,7 @@ let rosterslot = {
     props: ['employee', 'employeeindex','hasqualifier', 'positions'],
     data: function() {
         return {
-            schedules : this.employee.schedules,
+            // schedules : this.employee.schedules,
             positionqualifiers: [],
             hours: 0
         }
@@ -1169,13 +1191,14 @@ let rosterslot = {
                     :class="{invalid :nameNotSet, gradeA :isGradeA, visiting :isVisiting}"
                     v-on:dblclick="$emit('select-employee', employeeindex)"
                 >{{fullname}}</td>
-                <positionselector tabindex="-1"
-                    :employee="employee"    
+                <positionselector 
+                    :employee="employee" 
+                    :schedules="employee.schedules"   
                     :positions="positions"
                     :hasqualifier="hasqualifier">
                 </positionselector>
                 <rostershiftcell 
-                    v-for="(schedule, index) in schedules" 
+                    v-for="(schedule, index) in employee.schedules" 
                     :schedule="schedule" 
                     :employee="employee"
                     :key="index"
@@ -1249,8 +1272,8 @@ let rosterslot = {
     methods: {
         noMissingCells: function() {
             let nomissingcells = 0;
-            for(let key in this.schedules) {
-                if (this.schedules[key].isEmpty()) {
+            for(let key in this.employee.schedules) {
+                if (this.employee.schedules[key].isEmpty()) {
                     nomissingcells += 1;
                 }
             }
@@ -1258,8 +1281,8 @@ let rosterslot = {
         },
         noInvalidCells: function() {
             let noinvalidcells = 0;
-            for(let key in this.schedules) {
-                if (!this.schedules[key].isValid()) {
+            for(let key in this.employee.schedules) {
+                if (!this.employee.schedules[key].isValid()) {
                     noinvalidcells += 1;
                 }
             }
@@ -1273,8 +1296,8 @@ let rosterslot = {
         },
         updatehours: function() {
             this.hours = 0;
-            for(let key in this.schedules) {
-                this.hours += this.schedules[key].hours();
+            for(let key in this.employee.schedules) {
+                this.hours += this.employee.schedules[key].hours();
             }
             this.employee.hours = this.hours;
             this.employee.noMissingCells = this.noMissingCells();
@@ -1321,7 +1344,7 @@ let rostersection = {
                             class="rosterrow" 
                             v-for="(employee, index) in employees"
                             v-if="employee.sectionsDefID === section.id" 
-                            :employee="employee" 
+                            :employee="employee"
                             :key="index"
                             :employeeindex="index"
                             :positions="positions"
@@ -1911,13 +1934,14 @@ let selectiondialog = {
         showCancel: Boolean,
         handle: String,
         title: String,
-        secondarytitle: String
+        secondarytitle: String,
+        searchtext: String
     },
-    data: function() {
-        return {
-            searchText: ''
-        }
-    },
+    // data: function() {
+    //     return {
+    //         searchText: ''
+    //     }
+    // },
     components: {
         'genericdialog' : genericdialog
     },
@@ -1928,7 +1952,7 @@ let selectiondialog = {
                     :secondarytitle="secondarytitle"
                     :show-cancel="showCancel">
                         <template slot="body">
-                            <input type="text" v-model="searchText" v-on:input="$emit('input',searchText)">
+                            <input type="text" v-model="searchtext" v-on:input="$emit('input',searchtext)">
                             <ul>
                                 <slot name="elements"></slot>
                             </ul>
@@ -1950,7 +1974,8 @@ let selectemployee = {
     template: `<selectiondialog
                     handle="selectemployee-dialog"
                     title="Select an employee"
-                    secondarytitle="Double click to selct"
+                    secondarytitle="Double click to select"
+                    :searchtext="searchText"
                     show-cancel
                     v-on:input="searchTextChanged">
                     <template slot="elements">
@@ -2016,6 +2041,7 @@ let copyfromroster = {
                     handle="selectroster-dialog"
                     title="Select a week to copy the roster from"
                     secondarytitle="Double click to selct"
+                    :searchtext="searchText"
                     show-cancel
                     v-on:input="searchTextChanged">
                     <template slot="elements">
@@ -2044,6 +2070,7 @@ let copyfromroster = {
         },
         rosterSelected: function(roster) {
             //console.log('Entry double clicked');
+            this.searchText = '';
             this.$emit('copyfromweekending', roster);
         }
     }
@@ -2138,7 +2165,13 @@ const app = new Vue({
         acumenexport: {
             title : '',
             body : ''
-        }
+        },
+        showdrafttext: true,
+        noemployees: 0,
+        noshifts: 0,
+        noexcusecodes: 0,
+        shortcuts: [],
+        schedulesloaded: false
         // additionalhours: 0
     },
     components: {
@@ -2193,6 +2226,9 @@ const app = new Vue({
                     this.loadEmployees();
                     document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
                 });
+                // if (newval.autoApprove === '1') {
+                //     this.showdrafttext = false;
+                // }
             }
         },
         employees: function(newval, oldval) {
@@ -2218,13 +2254,19 @@ const app = new Vue({
         },
         month: function() {
             return moment(this.formatWeekending(), 'MM/DD/YYYY').format('MMMM');
+        },
+        exportedToAcumen: function() {
+            if (this.roster && this.roster.exportedToAcumen === '1') {
+                return true;
+            }
+            return false;
         }
     },
     methods: {
         clipboardEmpty: function() {
-            // if (!data.clipboard) {
-            //     return true;
-            // }
+            if (!data.clipboard) {
+                return true;
+            }
             return false;
         },
         setLocationsRegExPattern: function() {
@@ -2256,6 +2298,8 @@ const app = new Vue({
             if (this.employees) {
                 this.nomissingcells = 0;
                 this.noinvalidcells = 0;
+                this.noshifts = 0;
+                this.noexcusecodes = 0;
                 for(employee of this.employees) {
                     if(employee.noMissingCells) {
                         this.nomissingcells += employee.noMissingCells;
@@ -2263,7 +2307,17 @@ const app = new Vue({
                     if(employee.noInvalidCells) {
                         this.noinvalidcells += employee.noInvalidCells;
                     }
+                    for (schedule of employee.schedules) {
+                        if (schedule.shiftstring) {
+                            if (Validator.isExcuse(schedule.shiftstring)) {
+                                this.noexcusecodes += 1;
+                            } else {
+                                this.noshifts += 1;
+                            }
+                        }
+                    }
                 }
+                this.noemployees = this.employees.length;
             }
         },
         deleteEmployee: function(index) {
@@ -2279,10 +2333,10 @@ const app = new Vue({
                     this.deletedemployees.sort(this.sortEmployees);
                 }
             }
-            this.employees.splice(index, 1); //remove employee
             if (this.employees[index].id && this.employees[index].id > 0) { //Add employee ID to deletedIDs if it exists and is > 0
                 this.deletedEmployeeIDs.push(this.employees[index].id);
             }
+            this.employees.splice(index, 1); //remove employee
             this.updatestats();
         },
         hoursUpdated: function() {
@@ -2340,7 +2394,10 @@ const app = new Vue({
         },
         createEmployeeSchedules: function() {
             for(let employee of this.employees) {
-                employee.schedules = this.createSchedules(employee);
+                if (!employee.schedules) {
+                    //employee.schedules = this.createSchedules(employee);
+                    this.$set(employee, 'schedules', this.createSchedules(employee));
+                }
             }
         },
         showSavedEmployeeSchedules: function() {
@@ -2353,9 +2410,10 @@ const app = new Vue({
                     schedule.rosterID = savedschedule.rosterID;
                     schedule.shiftstring = savedschedule.shiftstring;
                     schedule.setShifts();
-                    schedule.format('short');
+                    schedule.format('short'); 
                 }
             };
+            this.schedulesloaded = true;
             this.emitScheduleUpdated();
         },
         findEmployeeByEmpNo: function(emp_no) {
@@ -2363,6 +2421,15 @@ const app = new Vue({
             for(let employee of this.employees) {
                 if (employee.emp_no === emp_no) {
                     return employee;
+                }
+            }
+            return result;
+        },
+        findEmployeeIndexByEmpNo: function(emp_no) {
+            let result = -1;
+            for(let i = 0; i < this.employees.length; i++) {
+                if (this.employees[i].emp_no === emp_no) {
+                    return i;
                 }
             }
             return result;
@@ -2446,8 +2513,10 @@ const app = new Vue({
             return fetch(url)
             .then(response => response.json())
             .then(result => {
-                if (result.length === 1)
-                this.roster = result[0];
+                if (result.length === 1) {
+                    this.roster = result[0];
+                    data.roster = this.roster;
+                }
                 // if (callback) {
                 //     callback();
                 // }
@@ -2547,6 +2616,7 @@ const app = new Vue({
             return fetch(url)
             .then(response => response.json())
             .then(results => {
+                this.shortcuts = results;
                 data.shortcuts = results;
             })
         },
@@ -2565,6 +2635,10 @@ const app = new Vue({
             .then(results => {
                 data.openinghours = results;
             })
+        },
+        approveRoster: function() {
+            let url = `approveroster.php?id=${this.roster.id}`;
+            fetch(url);
         },
         saveRoster: function(exportToAcumen = false, confirm = false) {
             let url = `saveroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
@@ -2597,12 +2671,13 @@ const app = new Vue({
         completeRosterSave: function() {
             if (this.roster.id) {
                 //this.roster = result[0];
-                let savePromise = Promise.all(this.saveRosterEmployees())
+                let saves = this.saveRosterEmployees();
+                let deletions = this.removeDeletedRosterEmployees();
+                let alltasks = saves.concat(deletions);
+                return Promise.all(alltasks)
                 .then(() => {
                     Promise.all(this.saveRosterSchedules());
                 });
-                let deletePromise = Promise.all(this.removeDeletedRosterEmployees());
-                return Promise.all([savePromise, deletePromise]);
             }
             return Promise.resolve(null);
         },
@@ -2615,7 +2690,7 @@ const app = new Vue({
         },
         removeDeletedRosterEmployees: function() {
             let promises = [];
-            for(let id in this.deletedEmployeeIDs) {
+            for(let id of this.deletedEmployeeIDs) {
                 promises.push(this.deleteRosterEmployee(id));
             }
             return promises;
@@ -2651,7 +2726,7 @@ const app = new Vue({
         deleteRosterEmployee: function(id) {
             let url = `deleterosteremployee.php?id=${id}`;
             return fetch(url)
-            .then(response => response.json())
+            // .then(response => response.json())
             .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
         },
         saveRosterSchedules: function() {
@@ -2722,13 +2797,13 @@ const app = new Vue({
             .catch(error => console.error(`Failed to delete Working Schedule`, error));
         },
         deleteSchedules: function() {
-            let promises = [];
+            let deletions = [];
             for(let employee of this.employees) {
                 for(let schedule of employee.schedules) {
-                    promises.push(this.deleteSchedule(employee, schedule.date));
+                    deletions.push(this.deleteSchedule(employee, schedule.date));
                 }
             }
-            return promises;
+            return Promise.all(deletions);
         },
         insertWorkingSchedule: function(employee, shift) {
             let formData = new FormData();
@@ -2802,21 +2877,55 @@ const app = new Vue({
         },
         exportToAcumen: function() {
             this.saveRoster(true); //save roster
-            let promises = this.deleteSchedules(); //delete all existing working schedules
-            Promise.all(promises)
-            .then(this.insertSchedules());
+            // let promises = this.deleteSchedules(); //delete all existing working schedules
+            // Promise.all(promises)
+            this.deleteSchedules()
+            .then(this.insertSchedules())
+            .then(this.loadRoster()); //Roster should be read-only after this call to loadRoster
+        },
+        finalPrint: function() {
+            this.showdrafttext = false;
+            window.onafterprint = () => {
+                this.showdrafttext = true;
+            }
+            this.$nextTick(function() {
+                window.print();
+            })
         },
         menuoption_exportToAcumen: function() {
             if (this.nomissingcells > 0) {
+                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('click', this.missingCellsModalOKClicked)
                 $(this.$refs.missingCellsDialog.$el).modal('show');
             } else {
                 this.exportToAcumen();
             }
         },
+        confirmApprovalOKClicked: function() {
+            $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).off('click');
+            $(this.$refs.confirmApproval.$el).modal('hide');
+            this.approveRoster();
+            this.menuoption_exportToAcumen();
+        },
+        menuoption_approve: function() {
+            //Confirm that they wish to approve the roster
+            //store approval in database
+            //Export to acumen
+            $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).on('click', this.confirmApprovalOKClicked);
+            $(this.$refs.confirmApproval.$el).modal('show');
+        },
         menuoption_finalPrint: function() {
-            //export to acumen
-            //set finalprint flag === 1, this will report the DRAFT overlay
-            //print the roster
+            //need to show dialog informing user that this will cause the shifts to export to acumen
+            //only need to re-export to Acumen if the roster has been saved subsequent to last export.
+            //will need option to delete Acumen shifts which means we should probably save the Acumen ID for each shift
+            //this would also allow us to delete and edit individual shifts from Acumen
+            //for each shift will need to track isDirty mean the cell was edited but not saved and
+            //AcumenIsDirty meaning it was edited after the last Acumen export and not re-exported. Anytime the roster is edited 
+            //after exporting to Acumen then Final Print should only be available after Approved is checked however this coulld
+            //still result in a situation where a roster is Final Printed and posted, edited subsequently and Final Printed again
+            //but not reposted.
+            //Maybe after exporting to Acumen the roster should be read only and Systems has to contact if it needs to be edited and re-exported
+            //so the shifts can be deleted from WorkingSchedules
+            this.finalPrint();
         },
         menuoption_copyFrom: function() {
             /* This cannot be done if the roster has been approved or exported to acumen*/
@@ -2881,6 +2990,7 @@ const app = new Vue({
             EventBus.$emit('SET-EXCUSECODE', code);
         },
         missingCellsModalOKClicked: function() {
+            $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).off('click');
             $(this.$refs.missingCellsDialog.$el).modal('hide');
             this.exportToAcumen();
         },
@@ -2906,6 +3016,12 @@ const app = new Vue({
         },
         menuoption_paste: function() {
             this.actionMenuOption('paste');
+        },
+        menuoption_showStats: function() {
+            $(this.$refs.showstats.$el).modal('show');
+        },
+        menuoption_shortcuts: function() {
+            $(this.$refs.shortcutsDialog.$el).modal('show');
         },
         deleteAllShifts: function() {
             $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
@@ -3095,8 +3211,18 @@ const app = new Vue({
             //console.log('Save roster');
             this.saveRoster(false, true);
         },
+        resetPatternsPosition: function() {
+            // patterns.excusecode = '^(off(?:\\(r\\))?|~)$';
+            // patterns.times = '(^(?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)\\s*-\\s*((?:0?\\d|1(?:0|1|2))(?:(\\:)?(?:0|3)0)?\\s*(?:a|p)m?)',
+            // patterns.location = '(?:(?:\\s+)(?:@?)(~))';
+            patterns.position = '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(~))';
+            // patterns.time = '^(0?\\d|1(?:0|1|2))((?:(\\:)?)((?:0|3)0))?\\s*((?:a|p)m?)';
+            // patterns.qualifier = '(rest|barn|dtru)';
+            // patterns.comment = '(?:\\*\\*)([A-Za-z\\s]+)';
+        },
         menuoption_new: function() {
             //reset the data options
+            this.schedulesloaded = false;
             this.roster = null;
             this.sections = null;
             this.employees = null;
@@ -3128,6 +3254,7 @@ const app = new Vue({
             this.hoursexceeded = 0;
             this.hoursexceeded_shiftstring = '';
             this.hoursexceeded_cell = null;
+            this.resetPatternsPosition();
             this.validate();
             showStartupModal();
         },
@@ -3147,11 +3274,12 @@ const app = new Vue({
             this.locations = json;
             data.locations = json;
         });
-        let vm = this;
-        window.setInterval(function() { 
-            vm.saveRoster();
-            //console.log('Autosaving roster');
-        }, 300000); //Autosave every five minuutes.
+        if (this.roster.exportedToAcumen === '0') {
+            let vm = this;
+            window.setInterval(function() { 
+                vm.saveRoster();
+            }, 300000); //Autosave every five minuutes.
+        }
     },
     mounted: function() {
         EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {
