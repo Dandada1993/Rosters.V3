@@ -1054,10 +1054,7 @@ let rostershiftcell = {
                     <template v-else>
                         <span class="readonly" :class="{isclosed :!isOpen}">{{schedule.shiftstring}}</span>
                     </template>
-                    <span v-if="schedule.firstShift" class="shift-read">{{schedule.formatFirstShift('short', 'REST')}}</span>
-                    <span v-if="schedule.secondShift" class="shift-read">/<br></span>
-                    <span v-if="schedule.secondShift" class="shift-read">{{schedule.formatSecondShift('short', 'REST')}}</span>
-                    <span v-if="schedule.isExcuse()" class="shift-read">{{schedule.shiftstring}}</span>
+                    <span class="shift-read" v-html="readonlyFormat"></span>
                 </td>`,
     components: {
         'rostershift' : rostershift
@@ -1094,6 +1091,22 @@ let rostershiftcell = {
                 exportedtoacumen = true;
             }
             return this.isOpen && !exportedtoacumen
+        },
+        readonlyFormat: function() {
+            let retval = '';
+            if (this.schedule) {
+                if (this.schedule.isExcuse()) {
+                    retval = this.schedule.shiftstring;
+                } else {
+                    if (this.schedule.firstShift) {
+                        retval = this.schedule.formatFirstShift('short', 'REST');
+                    }
+                    if (this.schedule.secondShift) {
+                        retval = retval + '/<br>' + this.schedule.formatSecondShift('short', 'REST');
+                    }
+                }
+            }
+            return retval;
         }
     },
     methods: {
@@ -1215,7 +1228,11 @@ let rosterslot = {
     },
     computed: {
         fullname: function() {
-            return `${this.employee.emp_fname} ${this.employee.emp_lname}`;
+            let name = `${this.employee.emp_fname} ${this.employee.emp_lname}`;
+            if (this.isVisiting) {
+                name = name + ` (${this.employee.defaultLocation.toUpperCase()})`;
+            }
+            return name;
         },
         position: function() {
             let position = this.employee.defaultPosition;
@@ -2185,6 +2202,16 @@ const app = new Vue({
         'maxhoursexceeded' : maxhoursexceeded
     },
     watch: {
+        roster: function(newVal) {
+            if (newVal) {
+                if (newVal.exportedToAcumen === '0') {
+                    let vm = this;
+                    window.setInterval(function() { 
+                        vm.saveRoster();
+                    }, 300000); //Autosave every five minuutes
+                }
+            }
+        },
         locations: function() {
             this.setLocationsRegExPattern();
             let requestedLocID = this.$el.querySelector('#locID').value;
@@ -3274,12 +3301,12 @@ const app = new Vue({
             this.locations = json;
             data.locations = json;
         });
-        if (this.roster.exportedToAcumen === '0') {
-            let vm = this;
-            window.setInterval(function() { 
-                vm.saveRoster();
-            }, 300000); //Autosave every five minuutes.
-        }
+        // if (this.roster.exportedToAcumen === '0') {
+        //     let vm = this;
+        //     window.setInterval(function() { 
+        //         vm.saveRoster();
+        //     }, 300000); //Autosave every five minuutes.
+        // }
     },
     mounted: function() {
         EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {

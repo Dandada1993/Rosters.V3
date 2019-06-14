@@ -19,6 +19,7 @@
 <body>
     <textarea id="pastetext" style="display: none;" ></textarea>
     <div id="main">
+        <div class="loadercontainer"><div class="loader" v-if="location && !schedulesloaded"></div></div>
         <div 
             v-if="location && location.autoApprove === '0' && showdrafttext"
             :class="{ drafttext: showdrafttext }"
@@ -112,6 +113,9 @@
                                 <li><a v-on:click="menuoption_showStats">Roster Stats</a></li>
                             </ul>
                         </li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li v-if="exportedToAcumen"><a>READONLY - exported to Acumen</a></li>
                     </ul>
                 </div>
             </div>
