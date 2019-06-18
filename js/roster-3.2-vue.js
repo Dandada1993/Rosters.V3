@@ -1,3 +1,5 @@
+let autoSave = null;
+
 let data = {
     employees: [],
     location: null,
@@ -2204,11 +2206,11 @@ const app = new Vue({
     watch: {
         roster: function(newVal) {
             if (newVal) {
-                if (newVal.exportedToAcumen === '0') {
-                    let vm = this;
-                    window.setInterval(function() { 
-                        vm.saveRoster();
-                    }, 300000); //Autosave every five minuutes
+                if (newVal.exportedToAcumen === '1') {
+                    if (autoSave) {
+                        clearInterval(autoSave);
+                        console.log('Cancelling auto save');
+                    }
                 }
             }
         },
@@ -3301,12 +3303,11 @@ const app = new Vue({
             this.locations = json;
             data.locations = json;
         });
-        // if (this.roster.exportedToAcumen === '0') {
-        //     let vm = this;
-        //     window.setInterval(function() { 
-        //         vm.saveRoster();
-        //     }, 300000); //Autosave every five minuutes.
-        // }
+        let vm = this;
+        autoSave = window.setInterval(function() { 
+            vm.saveRoster();
+            console.log('Auto saved');
+        }, 300000); //Autosave every five minuutes.
     },
     mounted: function() {
         EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {
