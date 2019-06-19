@@ -2209,11 +2209,15 @@ const app = new Vue({
     watch: {
         roster: function(newVal) {
             if (newVal) {
-                if (newVal.exportedToAcumen === '1') {
-                    if (autoSave) {
-                        clearInterval(autoSave);
-                        console.log('Cancelling auto save');
-                    }
+                if (autoSave) {
+                    clearInterval(autoSave);
+                }
+                if (newVal.exportedToAcumen === '0') {
+                    let vm = this;
+                    autoSave = window.setInterval(function() { 
+                        vm.saveRoster();
+                        // console.log('Auto saved');
+                    }, 300000); //Autosave every five minuutes.
                 }
             }
             data.roster = newVal;

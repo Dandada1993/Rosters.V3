@@ -125,12 +125,12 @@
                 <div class="col-md-6">
                     <h2>{{location.name}} (week ending: {{weekendingDisplay}})</h2>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <table class="legend" v-if="location">
                         <tbody>
                             <tr>
                                 <td class="data invalid">&nbsp;</td>
-                                <td class="title">Invalid shifts</td>
+                                <td class="title">Invalid (mouse over for reason)</td>
                                 <td class="data visiting" v-show="location.showvisitingemployees === '1'">&nbsp;</td>
                                 <td class="title" v-show="location.showvisitingemployees === '1'">Visiting employee</td>
                             </tr>
@@ -144,7 +144,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="right">
                         <table class="stats">
                             <tbody>
