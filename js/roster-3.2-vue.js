@@ -910,7 +910,8 @@ let rostershift = {
             if (document.execCommand("cut")) {
                 this.valueChanged();
             }
-            data.clipboard = this.schedule.shiftstring;
+            //data.clipboard = this.schedule.shiftstring;
+            EventBus.$emit('CUTORCOPY', this.schedule.shiftstring);
         },
         copy: function() {
             //each highlighted cell receives the CONTEXTMENU-SELECTIOn event and execute the command independently.
@@ -920,7 +921,8 @@ let rostershift = {
             let copyText = this.$el; 
             copyText.select();
             document.execCommand("copy");
-            data.clipboard = this.schedule.shiftstring;
+            // data.clipboard = this.schedule.shiftstring;
+            EventBus.$emit('CUTORCOPY', this.schedule.shiftstring);
         },
         paste: function() {
             if (navigator.clipboard) {
@@ -2190,7 +2192,8 @@ const app = new Vue({
         noshifts: 0,
         noexcusecodes: 0,
         shortcuts: [],
-        schedulesloaded: false
+        schedulesloaded: false,
+        texttopaste: false
         // additionalhours: 0
     },
     components: {
@@ -2213,6 +2216,7 @@ const app = new Vue({
                     }
                 }
             }
+            data.roster = newVal;
         },
         locations: function() {
             this.setLocationsRegExPattern();
@@ -2293,7 +2297,7 @@ const app = new Vue({
     },
     methods: {
         clipboardEmpty: function() {
-            if (!data.clipboard) {
+            if (!this.texttopaste) {
                 return true;
             }
             return false;
@@ -2544,7 +2548,7 @@ const app = new Vue({
             .then(result => {
                 if (result.length === 1) {
                     this.roster = result[0];
-                    data.roster = this.roster;
+                    //data.roster = this.roster;
                 }
                 // if (callback) {
                 //     callback();
@@ -3358,6 +3362,10 @@ const app = new Vue({
             this.hoursexceeded_shiftstring = eventdata.schedule.shiftstring;
             this.hoursexceeded_cell = eventdata.cell;
             $(this.$refs.maximumHoursExceededDialog.$el).modal('show');
+        });
+        EventBus.$on('CUTORCOPY', (text) => {
+            this.texttopaste = true;
+            data.clipboard = text;
         })
 
     }
