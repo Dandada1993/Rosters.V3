@@ -140,12 +140,22 @@ Need to ensure that ExcuseCodes are not duplicated when exported from the Roster
 
 Searching saves the previous searched text.
 
-Changing default position is not being reflected in shifts.
+Changing default position is not being reflected in shifts (done)
 
 Roster total is incorrect.
 
 When the default position is changed e.g. from REST FC to BARN FC, the printed roster should be printed as though REST is the default qualifier as the default position is not shown on the printed roster.
-e.g. Default Position: BARN FC, shift "10:30a-5p" when printed should display as "10:30a-5p #BARN FC"
+e.g. Default Position: BARN FC, shift "10:30a-5p" when printed should display as "10:30a-5p #BARN FC" (done)
+
+When persons are visiting put their home branch in brackets (done)
+
+When adding a new employee () show in the name column before the employee is selected (done. needs to be tested)
+
+If an employee belonging to a branch is deleted and the roster is saved, there is no way to add back the employee as the employee does not appear in the otheremployees list. (done)
+
+Need to check for empty second shift e.g. "9AM-2PM @AIR #REST CR/"
+
+Review the font size on printing. Staff complaining it is too small.
 
 Issues:
 =======

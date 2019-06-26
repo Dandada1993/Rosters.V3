@@ -273,7 +273,8 @@ td.position span {
     border: 1px solid #95A5A6;
 }
 
-.selectsearch-dialog ul { /*#selectemployee-dialog ul {*/
+.selectsearch-dialog ul,
+.selectshifts-dialog ul { /*#selectemployee-dialog ul {*/
     height: 200px;
     overflow: scroll;
     overflow-x: hidden;
@@ -284,7 +285,8 @@ td.position span {
     margin-top: -1px;
 }
 
-.selectsearch-dialog li { /*#selectemployee-dialog li {*/
+.selectsearch-dialog li,
+.selectshifts-dialog li { /*#selectemployee-dialog li {*/
     border: 1px solid #ddd;
     margin-top: -1px; /* Prevent double borders */
     background-color: #f6f6f6;
@@ -295,7 +297,8 @@ td.position span {
     display: block;
 }
 
-.selectsearch-dialog li:active { /*#selectemployee-dialog li:active {*/
+.selectsearch-dialog li:active,
+.selectshifts-dialog li:active { /*#selectemployee-dialog li:active {*/
     background-color: #ABB2B9;
 }
 

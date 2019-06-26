@@ -197,7 +197,8 @@ let patterns = {
     position: '(?:(?:\\s*)((?:#?)(rest|barn|dtru)?)?\\s?(~))',
     time: '^(0?\\d|1(?:0|1|2))((?:(\\:)?)((?:0|3)0))?\\s*((?:a|p)m?)',
     qualifier: '(rest|barn|dtru)',
-    comment: '(?:\\*\\*)([A-Za-z\\s]+)'
+    comment: '(?:\\*\\*)([A-Za-z\\s]+)',
+    sansmeridiem: '((?:1(?:0|1|2)|0?\\d)(?:(\\:)?(?:0|3)0)?\\s*(a|p|am|pm)?)\\s*-\\s*((?:1(?:0|1|2)|0?\\d)(?:(\\:)?(?:0|3)0)?\\s*(a|p|am|pm)?)'
 };
 
 let Validator = {
@@ -240,14 +241,23 @@ let Validator = {
         let regex = new RegExp(patterns.comment, 'i');
         return value.replace(regex, '');
     },
+    hasMeridiem: function(value) {
+      let regex = new RegExp(patterns.time, 'i'),
+          result = regex.exec(value);
+      if (result[5]) {
+        return true;
+      } else {
+        return false;
+      }
+    },
     properTime: function (value) {
         //input must be minimally \da or \dp
         let regex = new RegExp(patterns.time, 'i'),
             result = regex.exec(value),
             hours = result[1].startsWith('0') ? result[1].replace('0', '') : result[1],
             minutes = typeof(result[4]) === "undefined" ? "00" : result[4],
-            period = result[5].length === 1 ? result[5] + "m" : result[5];
-        return (hours + ':' + minutes + period);
+            meridiem = result[5].length === 1 ? result[5] + "m" : result[5];
+        return (hours + ':' + minutes + meridiem);
     },            
     getTime: function (value) {
         let regex = new RegExp(patterns.times, 'i');
@@ -424,7 +434,7 @@ function Schedule(date) {
             let parts = this.shiftstring.split('/');
             this.firstShift = new Shift(this.date, parts[0]);
             this.firstShift.parse();
-            if (parts.length === 2) {
+            if (parts.length === 2 && parts[1].trim()) {
                 this.secondShift = new Shift(this.date, parts[1]);
                 this.secondShift.parse();
                 if (this.secondShift.location) {
@@ -852,8 +862,12 @@ let rostershift = {
                     this.schedule.shiftstring = shortcut.replacement;
                 }
             }
+            //add preprocessing step to facilitate users entering times without am or pm e.g. 9-4
+            //need to identify times without a, p, am or pm; test all permutations against the opening 
+            //hours for the shift location and if more than one is valid prompt the user to select the 
+            //correct shift, e.g. 11-3 could be 11a-3p or 11p-3a @ROC FRI or SAT nights
+            this.checkMeridiem(this.schedule.shiftstring);
             if (this.isValid){
-                // this.schedule.shiftstring = this.schedule.shiftstring;
                 this.schedule.setShifts();
                 this.schedule.format("short");
                 if (this.schedule.hours() > data.location.maximumshift) {
@@ -862,6 +876,65 @@ let rostershift = {
             }
             this.schedule.isDirty = true;
             this.emitChanged();
+        },
+        checkMeridiem: function(value) {
+            if (!this.isValid) {
+                let regex = new RegExp(patterns.sansmeridiem, 'i');
+                let permutations = [value];
+                let result;
+                do {
+                    result = regex.exec(value);
+                    if (result) {
+                        if (!result[3]) {
+                            permutations = this.permutate(permutations, result[1]);
+                        }
+                        if (!result[6]) {
+                            permutations = this.permutate(permutations, result[4]);
+                        }
+                        value = value.replace(regex, '');
+                    }
+                } while (result);
+                //console.log(permutations);
+                validshifts = [];
+                for(let permutation of permutations) {
+                    if (Validator.validShifts(permutation)) {
+                        validshifts.push(permutation);
+                    }
+                }
+                //console.log(validshifts);
+                goodshifts = [];
+                for(let validshift of validshifts) {
+                    let schedule = new Schedule(this.schedule.date);
+                    schedule.defaultLocation = this.schedule.defaultLocation;
+                    schedule.defaultPosition = this.schedule.defaultPosition;
+                    schedule.defaultQualifier = this.schedule.defaultQualifier;
+                    schedule.shiftstring = validshift;
+                    schedule.setShifts();
+                    schedule.format('short');
+                    if (!this.isShiftOutsideOpeningHours(schedule.firstShift) && !this.isShiftOutsideOpeningHours(schedule.secondShift)) {
+                        goodshifts.push(schedule.shiftstring);
+                    }
+                }
+                //console.log(goodshifts);
+                if (goodshifts.length === 1) {
+                    this.schedule.shiftstring = goodshifts[0];
+                } else if (goodshifts.length > 1) {
+                    //prompt user to select shift
+                    EventBus.$emit('CHOOSE-SHIFT', { cell: { row: this.row, column: this.col}, choices: goodshifts});
+                }
+            }
+        },
+        permutate: function(current, hour) {
+            let newlist = [];
+            for(let s of current) {
+                let spacer = '';
+                if (hour.endsWith(' ')) {
+                    spacer = ' ';
+                }
+                newlist.push(s.replace(hour, `${hour.trim()}a${spacer}`));
+                newlist.push(s.replace(hour, `${hour.trim()}p${spacer}`));
+            }
+            return newlist;
         },
         emitChanged: function() {
             this.$emit('cellchanged');
@@ -973,12 +1046,17 @@ let rostershift = {
         onChangeLocation: function(newlocation) {
             if (this.highlighted || this.$parent.isActive) {
                 this.schedule.changeLocation(newlocation);
+                this.schedule.setShifts();
+                this.schedule.format('short');
                 this.schedule.isDirty = true;
+                this.emitChanged();
             }
         },
         onChangePosition: function(newposition) {
             if (this.highlighted || this.$parent.isActive) {
                 this.schedule.changePosition(newposition);
+                this.schedule.setShifts();
+                this.schedule.format('short');
                 this.schedule.isDirty = true;
             }
         },
@@ -987,6 +1065,8 @@ let rostershift = {
                 this.schedule.shiftstring = code;
                 this.schedule.setShifts();
                 this.schedule.format('short');
+                this.schedule.isDirty = true;
+                this.emitChanged();
             }
         },
         isShiftOutsideOpeningHours: function(shift) {
@@ -1002,6 +1082,16 @@ let rostershift = {
                 }
             }
             return false;
+        },
+        onShiftChosen: function(eventdata) {
+            if (this.row === eventdata.cell.row && this.col === eventdata.cell.column) {
+                this.schedule.shiftstring = eventdata.shift;
+                this.schedule.setShifts()
+                this.schedule.format('short');
+                this.schedule.isDirty = true;
+                this.emitChanged();
+                //this.$set(this.schedule, 'shiftstring', eventdata.shift);
+            }
         }
     },
     mounted: function() {
@@ -1037,6 +1127,9 @@ let rostershift = {
                 this.performContextMenuAction(action);
             }
         });
+        EventBus.$on('SHIFT-CHOSEN', (eventdata) => {
+            this.onShiftChosen(eventdata);
+        })
     }
 }
 
@@ -1103,10 +1196,10 @@ let rostershiftcell = {
                     retval = this.schedule.shiftstring;
                 } else {
                     if (this.schedule.firstShift) {
-                        retval = this.schedule.formatFirstShift('short', 'REST');
+                        retval = this.schedule.formatFirstShift('short', data.location.defaultQualifier);
                     }
                     if (this.schedule.secondShift) {
-                        retval = retval + '/<br>' + this.schedule.formatSecondShift('short', 'REST');
+                        retval = retval + '/<br>' + this.schedule.formatSecondShift('short', data.location.defaultQualifier);
                     }
                 }
             }
@@ -1233,7 +1326,7 @@ let rosterslot = {
     computed: {
         fullname: function() {
             let name = `${this.employee.emp_fname} ${this.employee.emp_lname}`;
-            if (this.isVisiting) {
+            if (this.isVisiting && name.trim()) {
                 name = name + ` (${this.employee.defaultLocation.toUpperCase()})`;
             }
             return name;
@@ -1798,7 +1891,7 @@ let shiftentry = {
         setEndTime: function(time) {
             //console.log(`End time: ${time}`);
             this.currentShift.endtime = new moment(`${this.schedule.date.format('YYYY-MM-DD')} ${time}`, 'YYYY-MM-DD h:mm a');
-            if (this.currentShift.endtime.diff(this.currentShift.starttime) < 0) {
+            if (this.currentShift.endtime.diff(this.currentShift.starttime) <= 0) {
                 this.currentShift.endtime.add(1, 'days');
             }
             this.isValidEndTime();
@@ -2048,6 +2141,29 @@ let selectemployee = {
      }
 }
 
+let selectshift = {
+    props: ['choices'],
+    components: {
+        'genericdialog' : genericdialog
+    },
+    template: `<genericdialog
+                    class="selectshifts-dialog"
+                    title="Ambigious shift string provided. Please select correct shift."
+                    secondarytitle="Double click to select"
+                    show-cancel>
+                        <template slot="body">
+                        <li 
+                            v-for="shift in choices"
+                            v-on:dblclick="shiftselected(shift)">{{shift}}</li>
+                        </template>
+                </genericdialog>`,
+    methods: {
+        shiftselected: function(shift) {
+            this.$emit('shift-selected', shift);
+        }
+     }
+}
+
 let copyfromroster = {
     props: ['approvedrosters'],
     data: function() {
@@ -2193,7 +2309,11 @@ const app = new Vue({
         noexcusecodes: 0,
         shortcuts: [],
         schedulesloaded: false,
-        texttopaste: false
+        texttopaste: false,
+        shiftchoices: {
+            cell: null,
+            choices: null
+        }
         // additionalhours: 0
     },
     components: {
@@ -2204,20 +2324,17 @@ const app = new Vue({
         'genericdialog' : genericdialog,
         'selectiondialog' : selectiondialog,
         'copyfromroster' : copyfromroster,
-        'maxhoursexceeded' : maxhoursexceeded
+        'maxhoursexceeded' : maxhoursexceeded,
+        'selectshift' : selectshift
     },
     watch: {
         roster: function(newVal) {
             if (newVal) {
-                if (autoSave) {
-                    clearInterval(autoSave);
-                }
-                if (newVal.exportedToAcumen === '0') {
-                    let vm = this;
-                    autoSave = window.setInterval(function() { 
-                        vm.saveRoster();
-                        // console.log('Auto saved');
-                    }, 300000); //Autosave every five minuutes.
+                if (newVal.exportedToAcumen === '1') {
+                    if (autoSave) {
+                        clearInterval(autoSave);
+                        console.log('Cancelling auto save');
+                    }
                 }
             }
             data.roster = newVal;
@@ -2349,7 +2466,11 @@ const app = new Vue({
                             if (Validator.isExcuse(schedule.shiftstring)) {
                                 this.noexcusecodes += 1;
                             } else {
-                                this.noshifts += 1;
+                                if (schedule.isSplit()) {
+                                    this.noshifts += 2;
+                                } else {
+                                    this.noshifts += 1;
+                                }
                             }
                         }
                     }
@@ -2486,6 +2607,7 @@ const app = new Vue({
             schedule.defaultQualifier = employee.defaultQualifier;
             schedule.defaultPosition = employee.defaultPosition;
             schedule.isDirty = false;
+            schedule.shiftstring = '';
             if (!data.isOpen(this.location.locID, schedule.date)) {
                 schedule.shiftstring = 'OFF';
                 schedule.isDirty = true;
@@ -2721,7 +2843,9 @@ const app = new Vue({
         saveRosterEmployees: function() {
             let promises = [];
             for(let employee of this.employees) {
-                promises.push(this.saveRosterEmployee(employee)); 
+                if (employee.emp_no) { 
+                    promises.push(this.saveRosterEmployee(employee)); 
+                }
             };
             return promises;
         },
@@ -3301,6 +3425,15 @@ const app = new Vue({
         isValidRosteredAtLocation: function(target) {
             let regex = new RegExp(this.location.rosteredat, 'gi');
             return regex.test(target.type);
+        },
+        chooseShift: function(eventdata) {
+            this.shiftchoices.cell = eventdata.cell;
+            this.shiftchoices.choices = eventdata.choices;
+            $(this.$refs.selectshiftDialog.$el).modal('show');
+        },
+        shiftSelected: function(shift) {
+            $(this.$refs.selectshiftDialog.$el).modal('hide');
+            EventBus.$emit('SHIFT-CHOSEN', { cell: this.shiftchoices.cell, shift: shift});
         }
     },
     created: function() {
@@ -3370,7 +3503,10 @@ const app = new Vue({
         EventBus.$on('CUTORCOPY', (text) => {
             this.texttopaste = true;
             data.clipboard = text;
-        })
+        });
+        EventBus.$on('CHOOSE-SHIFT', (eventdata) => {
+            this.chooseShift(eventdata)
+        });
 
     }
     // updated: function(){

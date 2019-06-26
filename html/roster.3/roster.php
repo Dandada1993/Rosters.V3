@@ -300,6 +300,12 @@
             :otheremployees="otheremployees"
             v-on:employee-selected="employeeSelected"
         ></div>
+        <div
+            ref="selectshiftDialog" 
+            is="selectshift"
+            :choices="shiftchoices.choices"
+            v-on:shift-selected="shiftSelected"
+        ></div>
         <div is="shiftentry" v-if="location && editdata"
             :location="location"
             :employee="editdata.employee"
