@@ -1289,6 +1289,7 @@ let rosterslot = {
                     <span class="rownumber">{{employeeindex + 1}}</span>
                     <span class="deleterow">
                         <button 
+                            v-if="allowEdit"
                             type="button" 
                             class="btn btn-xs" 
                             v-on:click="emitDeleteEmployee()"
@@ -1299,7 +1300,7 @@ let rosterslot = {
                 <td 
                     class="col name" 
                     :class="{invalid :nameNotSet, gradeA :isGradeA, visiting :isVisiting}"
-                    v-on:dblclick="$emit('select-employee', employeeindex)"
+                    v-on:dblclick="selectEmployee()"
                 >{{fullname}}</td>
                 <positionselector 
                     :employee="employee" 
@@ -1381,6 +1382,14 @@ let rosterslot = {
             } else {
                 return '';
             }
+        },
+        allowEdit: function() {
+            //return this.isOpen && data.roster.exportedToAcumen === '0';
+            let exportedtoacumen = false;
+            if (data.roster && data.roster.exportedToAcumen === '1') {
+                exportedtoacumen = true;
+            }
+            return !exportedtoacumen
         }
     },
     methods: {
@@ -1423,6 +1432,11 @@ let rosterslot = {
         },
         emitEnterShift: function(schedule) {
             this.$emit('enter-shifts', { schedule: schedule, employee: this.employee })
+        },
+        selectEmployee: function() {
+            if (this.allowEdit) {
+                this.$emit('select-employee', this.employeeindex)
+            }
         }
     },
     mounted() {
@@ -1442,6 +1456,7 @@ let rostersection = {
                             <td>{{section.name}}
                                 <span>
                                     <button 
+                                        v-if="allowEdit"
                                         type="button" 
                                         class="btn btn-sm btn-add" 
                                         v-on:click="emitAddEmployee()"
@@ -1480,6 +1495,14 @@ let rostersection = {
                 return 1;
             }
             return 0;
+        },
+        allowEdit: function() {
+            //return this.isOpen && data.roster.exportedToAcumen === '0';
+            let exportedtoacumen = false;
+            if (data.roster && data.roster.exportedToAcumen === '1') {
+                exportedtoacumen = true;
+            }
+            return !exportedtoacumen
         }
     },
     methods: {
@@ -2254,6 +2277,7 @@ let maxhoursexceeded = {
 const app = new Vue({
     el: '#main',
     data: {
+        options: null,
         roster: null,
         locations: null,
         sections : null,
@@ -2397,6 +2421,25 @@ const app = new Vue({
         },
         excusecodes: function() {
             this.setExcuseCodesRegExPattern();
+        },
+        options: function(newVal) {
+            if (newVal) {
+                let frequency = this.getOptionValue('savefrequency');
+                if (frequency) {
+                    frequency = parseInt(frequency);
+                }
+                if (frequency !== 0) {
+                    // let vm = this;
+                    // autoSave = window.setInterval(function() { 
+                    //     vm.saveRoster();
+                    //     console.log('Auto saved');
+                    // }, frequency); //Autosave every five minuutes.
+                    autoSave = window.setInterval(() => {
+                        this.saveRoster();
+                        console.log('Auto saved');
+                    }, frequency);
+                }
+            }
         }
     },
     computed: {
@@ -2414,9 +2457,28 @@ const app = new Vue({
                 return true;
             }
             return false;
+        },
+        rosterURL: function() {
+            let url = this.getOptionValue('url');
+            if (url) {
+                let weekending = moment(this.formatWeekending(), 'MM/DD/YYYY').format('YYYY-MM-DD')
+                url = `${url}?locid=${this.location.locID}&weekending=${weekending}`;
+                return url;
+            }
+            return null;
         }
     },
     methods: {
+        getOptionValue: function(name) {
+            if (this.options) {
+                for(let option of this.options) {
+                    if (option.name.toLowerCase() === name.toLowerCase()) {
+                        return option.value;
+                    }
+                }
+            }
+            return null;
+        },
         clipboardEmpty: function() {
             if (!this.texttopaste) {
                 return true;
@@ -3184,6 +3246,11 @@ const app = new Vue({
         menuoption_shortcuts: function() {
             $(this.$refs.shortcutsDialog.$el).modal('show');
         },
+        menuoption_copyurl: function() {
+            $('#rosterurl input').focus();
+            $('#rosterurl input').select();
+            document.execCommand('copy');
+        },
         deleteAllShifts: function() {
             $(this.$refs.deleteSchedulesDialog.$el).modal('hide');
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
@@ -3444,11 +3511,12 @@ const app = new Vue({
             this.locations = json;
             data.locations = json;
         });
-        let vm = this;
-        autoSave = window.setInterval(function() { 
-            vm.saveRoster();
-            console.log('Auto saved');
-        }, 300000); //Autosave every five minuutes.
+        url = 'getoptions.php';
+        fetch(url)
+        .then(response => response.json())
+        .then(json => {
+            this.options = json;
+        });
     },
     mounted: function() {
         EventBus.$on('CELL-HIGHLIGHT-START', (cell) => {

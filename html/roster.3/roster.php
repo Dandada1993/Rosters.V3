@@ -24,6 +24,7 @@
             v-if="location && location.autoApprove === '0' && showdrafttext"
             :class="{ drafttext: showdrafttext }"
         >DRAFT</div>
+        <div v-if="location" id="rosterurl"><input type="text" :value="rosterURL" /></div>
         <?php
             echo "<input type=\"text\" id=\"locID\" value=\"$locID\" style=\"display: none;\"/>";
             echo "<input type=\"text\" id=\"weekending\" value=\"$weekending\" style=\"display: none;\"/>";
@@ -111,6 +112,7 @@
                                 <li><a href="tipstricks.html" target="_blank">Tips and Tricks</a></li>
                                 <li><a v-on:click="menuoption_shortcuts">Show Shortcuts</a></li>
                                 <li><a v-on:click="menuoption_showStats">Roster Stats</a></li>
+                                <li><a v-on:click="menuoption_copyurl">Copy Link</a></li>
                             </ul>
                         </li>
                     </ul>
