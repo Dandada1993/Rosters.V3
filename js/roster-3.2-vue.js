@@ -2295,6 +2295,7 @@ const app = new Vue({
         totalhours: 0,
         loanedhours: 0,
         agreedhours: 0,
+        additionalhours: 0,
         deletedemployees: [],
         deletedEmployeeIDs: [],
         otheremployees: [],
@@ -2338,7 +2339,6 @@ const app = new Vue({
             cell: null,
             choices: null
         }
-        // additionalhours: 0
     },
     components: {
         'rostersection' : rostersection,
@@ -2444,7 +2444,7 @@ const app = new Vue({
     },
     computed: {
         difference: function() {
-            return this.agreedhours - this.totalhours;
+            return this.agreedhours + this.additionalhours - this.totalhours;
         },
         weekendingDisplay: function() {
             return moment(this.formatWeekending(), 'MM/DD/YYYY').format('dddd MMM D, YYYY');
@@ -2774,6 +2774,7 @@ const app = new Vue({
             .then(response => response.json())
             .then(json => {
                 this.agreedhours = parseFloat(json[0].allocatedhours); //json;
+                this.additionalhours = parseFloat(json[0].additionalhours);
             })
         },
         loadPositions: function() {
@@ -3467,6 +3468,7 @@ const app = new Vue({
             this.totalhours = 0;
             this.loanedhours = 0;
             this.agreedhours = 0;
+            this.additionalhours = 0;
             this.deletedemployees = [];
             this.deletedEmployeeIDs = [];
             this.otheremployees = [];

@@ -229,6 +229,10 @@
                                 <td class="title">Agreed to hours</td>
                                 <td class="data number">{{agreedhours}}</td>
                             </tr>
+                            <tr class="rosterrow" v-if="additionalhours >= 0">
+                                <td class="title">Additional Hours</td>
+                                <td class="data number">{{additionalhours}}</td>
+                            </tr>
                             <tr class="rosterrow" v-if="agreedhours > 0">
                                 <td class="title">Difference</td>
                                 <td class="data number">{{difference}}</td>
