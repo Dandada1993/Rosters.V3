@@ -73,6 +73,10 @@ td:not(.shift) {
     text-align: right;
 }
 
+.deleterow {
+    font-weight: bolder;
+}
+
 .name {
     width: 17%;
 }

@@ -1287,15 +1287,13 @@ let rosterslot = {
     template: `<tr>
                 <td class="col rowheader">
                     <span class="rownumber">{{employeeindex + 1}}</span>
-                    <span class="deleterow">
-                        <button 
-                            v-if="allowEdit"
-                            type="button" 
-                            class="btn btn-xs" 
-                            v-on:click="emitDeleteEmployee()"
-                            tabindex="-1">-
-                        </button>
-                    </span>
+                    <button 
+                        v-if="allowEdit"
+                        type="button" 
+                        class="btn btn-xs" 
+                        v-on:click="emitDeleteEmployee()"
+                        tabindex="-1"><span class="deleterow">x</span>
+                    </button>
                 </td>
                 <td 
                     class="col name" 
