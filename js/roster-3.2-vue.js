@@ -20,9 +20,9 @@ let data = {
                         is_open = true;
                         opening = new moment(row.opening, 'YYYY-MM-DD HH:mm' );
                         closing = new moment(row.closing, 'YYYY-MM-DD HH:mm');
-                        if (row.nextday_closingtime) {
-                            closing.add(1, 'days');
-                        }
+                        // if (row.nextday_closingtime) {
+                        //     closing.add(1, 'days');
+                        // }
                     }
                     return { is_open: is_open, opening: opening, closing: closing };
                 }
@@ -784,14 +784,14 @@ let rostershift = {
         },
         isTooLong: function() {
             //The following check is incorrect. The maximumshift should not be checked against the data.location but the schedule.firstShift.location
-            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > parseFloat(data.location.maximumshift)) {
+            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > data.getMaximumShift(this.schedule.firstShift.location)) {
                 return true;
             }
             return false;
         },
         isTooShort: function() {
             //The following check is incorrect. The maximumshift should not be checked against the data.location but the schedule.firstShift.location
-            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < parseFloat(data.location.minimumshift)) {
+            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < data.getMinimumShift(this.schedule.firstShift.location)) {
                 return true;
             }
             return false;
@@ -895,14 +895,14 @@ let rostershift = {
                     }
                 } while (result);
                 //console.log(permutations);
-                validshifts = [];
+                let validshifts = [];
                 for(let permutation of permutations) {
                     if (Validator.validShifts(permutation)) {
                         validshifts.push(permutation);
                     }
                 }
                 //console.log(validshifts);
-                goodshifts = [];
+                let goodshifts = [];
                 for(let validshift of validshifts) {
                     let schedule = new Schedule(this.schedule.date);
                     schedule.defaultLocation = this.schedule.defaultLocation;
@@ -915,12 +915,29 @@ let rostershift = {
                         goodshifts.push(schedule.shiftstring);
                     }
                 }
+                let goodlengths = [];
+                for(let goodshift of goodshifts) {
+                    let schedule = new Schedule(this.schedule.date);
+                    schedule.defaultLocation = this.schedule.defaultLocation;
+                    schedule.defaultPosition = this.schedule.defaultPosition;
+                    schedule.defaultQualifier = this.schedule.defaultQualifier;
+                    schedule.shiftstring = goodshift;
+                    schedule.setShifts();
+                    schedule.format('short');
+                    if (schedule.hours() <= data.getMaximumShift(schedule.defaultLocation)) {
+                        goodlengths.push(schedule.shiftstring);
+                    }
+                }
+                //If no shifts survive the good length check revert to the goodshifts
+                if (goodlengths.length === 0) {
+                    goodlengths = goodshifts;
+                }
                 //console.log(goodshifts);
-                if (goodshifts.length === 1) {
-                    this.schedule.shiftstring = goodshifts[0];
-                } else if (goodshifts.length > 1) {
+                if (goodlengths.length === 1) {
+                    this.schedule.shiftstring = goodlengths[0];
+                } else if (goodlengths.length > 1) {
                     //prompt user to select shift
-                    EventBus.$emit('CHOOSE-SHIFT', { cell: { row: this.row, column: this.col}, choices: goodshifts});
+                    EventBus.$emit('CHOOSE-SHIFT', { cell: { row: this.row, column: this.col}, choices: goodlengths});
                 }
             }
         },
@@ -2427,11 +2444,6 @@ const app = new Vue({
                     frequency = parseInt(frequency);
                 }
                 if (frequency !== 0) {
-                    // let vm = this;
-                    // autoSave = window.setInterval(function() { 
-                    //     vm.saveRoster();
-                    //     console.log('Auto saved');
-                    // }, frequency); //Autosave every five minuutes.
                     autoSave = window.setInterval(() => {
                         this.saveRoster();
                         console.log('Auto saved');

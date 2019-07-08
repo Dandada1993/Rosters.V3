@@ -46,17 +46,17 @@
                                 <li class="divider"></li>
                                 <li :class="{disabled: exportedToAcumen}" v-on:click="menuoption_copyFrom"><a >Copy From</a></li>
                                 <!-- </template> -->
-                                <li><a v-on:click="save">Save</a></li>
+                                <li :class="{disabled: exportedToAcumen}"><a v-on:click="save">Save</a></li>
                                 <li class="divider"></li>
                                 <template v-if="location && location.autoApprove === '0'">
-                                    <li><a v-on:click="menuoption_printdraft">Print Draft</a></li>
+                                    <li :class="{disabled: exportedToAcumen}"><a v-on:click="menuoption_printdraft">Print Draft</a></li>
                                 </template>
                                 <template v-if="location && location.autoApprove === '1'">
                                 <li><a v-on:click="menuoption_print">Print</a></li>
                                 </template>
                                 <template v-if="location && location.autoApprove === '0'">
                                     <!-- <li><a >Send for Approval</a></li> -->
-                                    <li><a v-on:click="menuoption_approve">Approve</a></li>
+                                    <li :class="{disabled: exportedToAcumen}"><a v-on:click="menuoption_approve">Approve</a></li>
                                 </template>
                                 <li class="divider"></li>
                                 <template v-if="location && location.autoApprove === '1'">

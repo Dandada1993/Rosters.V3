@@ -422,6 +422,7 @@ td.position span {
 
     td {
         border: 1px solid black;
+        /* page-break-inside: avoid;  */
     }
 
     .shortname {
@@ -440,7 +441,7 @@ td.position span {
 
     .shift-read {
         display: inline-block;
-        font-size: 1rem;
+        font-size: 1.1rem;
         text-align: center;
         line-height: normal;
     }
@@ -470,7 +471,7 @@ td.position span {
     #locationlegend span {
         display: inline-block;
         width:20%;
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
 
     .drafttext {
@@ -481,7 +482,7 @@ td.position span {
         top: 100px;
         left: 0px;
         text-align: center;
-        opacity: 0.5;
+        opacity: 0.3;
         width: 100%;
     }
 
