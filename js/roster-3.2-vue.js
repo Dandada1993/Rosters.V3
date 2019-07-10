@@ -743,24 +743,32 @@ function Schedule(date) {
 
 let rostershift = {
     props: ['schedule','employee'],
-    template: `<input type="text"
-                spellcheck="false"
-                class="shift-input"  
-                :class="{missing :isEmpty, invalid :!isValid, tooshort :isTooShort, highlight :highlighted, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong, ousidenormalhours: isOutsideOpeningHours}"
-                v-model="schedule.shiftstring"
-                v-on:focusin="handleFocusIn" 
-                v-on:focusout="handleFocusOut"   
-                v-on:change="valueChanged()"
-                v-on:keyup.enter="valueChanged()"
-                v-on:dblclick="emitEnterShift(schedule)"
-                v-on:mousedown="handleMouseDown"
-                v-on:mouseup="handleMouseUp"
-                v-on:keyup.arrow-right="handleArrowRight"
-                v-on:keyup.arrow-left="handleArrowLeft"
-                v-on:keyup.arrow-down="handleArrowDown"
-                v-on:keyup.arrow-up="handleArrowUp"
-                data-toggle="tooltip"
-                :title="title"/>`, 
+    template: `<div>
+                    <template v-if="allowEdit">
+                        <input type="text"
+                        spellcheck="false"
+                        class="shift-input" 
+                        :class="{missing :isEmpty, invalid :!isValid, tooshort :isTooShort, highlight :highlighted, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong, ousidenormalhours: isOutsideOpeningHours}" 
+                        v-model="schedule.shiftstring"
+                        v-on:focusin="handleFocusIn" 
+                        v-on:focusout="handleFocusOut"   
+                        v-on:change="valueChanged()"
+                        v-on:keyup.enter="valueChanged()"
+                        v-on:dblclick="emitEnterShift(schedule)"
+                        v-on:mousedown="handleMouseDown"
+                        v-on:mouseup="handleMouseUp"
+                        v-on:keyup.arrow-right="handleArrowRight"
+                        v-on:keyup.arrow-left="handleArrowLeft"
+                        v-on:keyup.arrow-down="handleArrowDown"
+                        v-on:keyup.arrow-up="handleArrowUp"
+                        data-toggle="tooltip"
+                        :title="title"/>
+                    </template>
+                    <template v-else>
+                        <span class="readonly" :class="{isclosed :!isOpen}">{{schedule.shiftstring}}</span>
+                    </template>
+                </div>
+                `, 
     data: function() {
         return {
             highlighted: false
@@ -853,7 +861,18 @@ let rostershift = {
                 result += `Hours selected are outside the normal operating hours for location(s)`;
             }
             return result;
-        }
+        },
+        isOpen: function() {
+            return data.isOpen(data.location.locID, this.schedule.date);
+        },
+        allowEdit: function() {
+            //return this.isOpen && data.roster.exportedToAcumen === '0';
+            let exportedtoacumen = false;
+            if (data.roster && data.roster.exportedToAcumen === '1') {
+                exportedtoacumen = true;
+            }
+            return this.isOpen && !exportedtoacumen
+        },
     },
     methods: {
         valueChanged: function() {
@@ -1155,19 +1174,15 @@ let rostershiftcell = {
     template: `<td 
                 ref="child"
                 class="col shift" 
-                :class="{active :isActive, isclosed :!isOpen}" >
-                    <template v-if="allowEdit">
-                        <rostershift 
-                            :schedule="schedule"
-                            :employee="employee"
-                            v-on:focusin="isActive = true" 
-                            v-on:cellchanged="emitUpdateHours"
-                            v-on:enter-shifts="emitEnterShift">
-                        </rostershift>
-                    </template>
-                    <template v-else>
-                        <span class="readonly" :class="{isclosed :!isOpen}">{{schedule.shiftstring}}</span>
-                    </template>
+                :class="{active :isActive, isclosed :!isOpen, missing :isEmpty, invalid :!isValid, tooshort :isTooShort, onloan :isOnLoan, visiting :isVisiting, toolong :isTooLong, ousidenormalhours: isOutsideOpeningHours}"
+                >
+                    <rostershift 
+                        :schedule="schedule"
+                        :employee="employee"
+                        v-on:focusin="isActive = true" 
+                        v-on:cellchanged="emitUpdateHours"
+                        v-on:enter-shifts="emitEnterShift">
+                    </rostershift>
                     <span class="shift-read" v-html="readonlyFormat"></span>
                 </td>`,
     components: {
@@ -1221,11 +1236,63 @@ let rostershiftcell = {
                 }
             }
             return retval;
-        }
+        },
+        isValid: function() {
+            return this.isEmpty || Validator.validShifts(this.schedule.shiftstring);
+        },
+        isEmpty: function() {
+            if (this.schedule.shiftstring) {
+                return false;
+            }
+            return true;
+        },
+        isTooLong: function() {
+            //The following check is incorrect. The maximumshift should not be checked against the data.location but the schedule.firstShift.location
+            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() > data.getMaximumShift(this.schedule.firstShift.location)) {
+                return true;
+            }
+            return false;
+        },
+        isTooShort: function() {
+            //The following check is incorrect. The maximumshift should not be checked against the data.location but the schedule.firstShift.location
+            if (Validator.isTimes(this.schedule.shiftstring) && this.schedule.hours() < data.getMinimumShift(this.schedule.firstShift.location)) {
+                return true;
+            }
+            return false;
+        },
+        isOnLoan: function() {
+            if (data.location.showloanedemployees === '1') {
+                if (Validator.isTimes(this.schedule.shiftstring)
+                    && this.employee.defaultLocation.toUpperCase() === data.location.locID.toUpperCase() 
+                    && (this.schedule.firstShift && this.schedule.firstShift.location.toUpperCase() !== data.location.locID.toUpperCase() 
+                    || (this.schedule.secondShift && this.schedule.secondShift.location.toUpperCase() !== data.location.locID.toUpperCase()))) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        isVisiting: function() {
+            if (data.location.showvisitingemployees === '1') {
+                if (Validator.isTimes(this.schedule.shiftstring)
+                    && this.employee.defaultLocation.toUpperCase() !== data.location.locID.toUpperCase() 
+                    && (this.schedule.firstShift && this.schedule.firstShift.location.toUpperCase() === data.location.locID.toUpperCase() 
+                    || (this.schedule.secondShift && this.schedule.secondShift.location.toUpperCase() === data.location.locID.toUpperCase()))) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        isOutsideOpeningHours: function() {
+            if (data.location.showloanedemployees === '0') {
+                return false;
+            } else {
+                return this.isShiftOutsideOpeningHours(this.schedule.firstShift) || this.isShiftOutsideOpeningHours(this.schedule.secondShift);
+            }
+        },
     },
     methods: {
         emitEnterShift: function(schedule) {
-            this.$emit('enter-shifts', schedule)
+            this.$emit('enter-shifts', schedule);
         },
         emitUpdateHours: function() {
             this.$emit('update-hours');
@@ -1234,6 +1301,20 @@ let rostershiftcell = {
             if (cell.row !== this.row || cell.column !== this.col) {
                 this.isActive = false;
             }
+        },
+        isShiftOutsideOpeningHours: function(shift) {
+            if (shift) {
+                let openinghours = data.getOpeningHours(shift.location, shift.date);
+                if (!openinghours.is_open) {
+                    return true;
+                }
+                openinghours.opening.subtract(data.getStartShiftBuffer(shift.location), 'minute');
+                openinghours.closing.add(data.getEndShiftBuffer(shift.location), 'minute');
+                if (shift.starttime.diff(openinghours.opening) < 0 || shift.endtime.diff(openinghours.closing) > 0) {
+                    return true;
+                }
+            }
+            return false;
         }
     },
     mounted: function() {
@@ -1271,6 +1352,7 @@ let positionselector = {
                 this.employee.defaultPosition = parts[1];
             }else{
                 this.employee.defaultPosition = parts[0];
+                this.employee.defaultQualifier = null;
             }
             for(let schedule of this.schedules) {
                 schedule.defaultQualifier = this.employee.defaultQualifier;

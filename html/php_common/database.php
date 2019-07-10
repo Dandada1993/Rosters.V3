@@ -81,6 +81,20 @@ class database {
     function getSQL(){
         return $this->sql;
     }
+
+    function execCustomQuery($sql, $query, $data) {
+        try {
+            $this->sql = $sql;
+            if (!empty($query)) {
+                $this->sql .= implode(', ', $query);
+                $this->stmt = $this->conn->prepare($this->sql);
+                //$this->stmt->execute($data);
+            }
+        }  
+        catch( PDOException $e ) {
+           die( $e->getMessage() ); 
+        }
+    }
     
     function release(){
         $this->stmt = null;

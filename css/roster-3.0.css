@@ -361,6 +361,7 @@ td.position span {
     display: inline-block;
     width: 100%;
     text-align: center;
+    /* height: 50px; */
 }
 
 .loadercontainer {

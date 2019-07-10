@@ -19,7 +19,7 @@
 <body>
     <textarea id="pastetext" style="display: none;" ></textarea>
     <div id="main">
-        <div class="loadercontainer"><div class="loader" v-if="location && !schedulesloaded"></div></div>
+        <div class="loadercontainer"><div class="loader" v-if="!locations || (location && !schedulesloaded)"></div></div>
         <div 
             v-if="location && location.autoApprove === '0' && showdrafttext"
             :class="{ drafttext: showdrafttext }"

@@ -128,7 +128,7 @@ Test deleting shifts
 
 Test deleting employees
 
-Add dialog box warning that final printing will export to Acumen
+Add dialog box warning that final printing will export to Acumen (done)
 
 Add option to mark remaining shifts as OFF
 
@@ -156,6 +156,14 @@ If an employee belonging to a branch is deleted and the roster is saved, there i
 Need to check for empty second shift e.g. "9AM-2PM @AIR #REST CR/"
 
 Review the font size on printing. Staff complaining it is too small.
+
+For guard roster add an option to print the roster with the number of guards and hours vs. allocated shown
+
+When location hours which are set with openingtime and closingtime set to "12:00AM" do not show any time options in shift dialog
+
+Grouping by default position when printing
+
+Changing a default position to Supervisor and reopening the roster caused the default position to be blank.
 
 Issues:
 =======
