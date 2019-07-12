@@ -153,17 +153,17 @@ When adding a new employee () show in the name column before the employee is sel
 
 If an employee belonging to a branch is deleted and the roster is saved, there is no way to add back the employee as the employee does not appear in the otheremployees list. (done)
 
-Need to check for empty second shift e.g. "9AM-2PM @AIR #REST CR/"
+Need to check for empty second shift e.g. "9AM-2PM @AIR #REST CR/" (done)
 
-Review the font size on printing. Staff complaining it is too small.
+Review the font size on printing. Staff complaining it is too small. (has been increased)
 
-For guard roster add an option to print the roster with the number of guards and hours vs. allocated shown
+For guard roster add an option to print the roster with the number of guards and hours vs. allocated shown (work around used were the get version of the URL can be copied to clipboard for distribution)
 
-When location hours which are set with openingtime and closingtime set to "12:00AM" do not show any time options in shift dialog
+When location hours which are set with openingtime and closingtime set to "12:00AM" do not show any time options in shift dialog (fixed)
 
-Grouping by default position when printing
+Grouping by default position when printing as an option on the LocationsDef (done)
 
-Changing a default position to Supervisor and reopening the roster caused the default position to be blank.
+Changing a default position to Supervisor and reopening the roster caused the default position to be blank (done).
 
 Issues:
 =======

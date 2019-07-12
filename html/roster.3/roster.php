@@ -108,7 +108,7 @@
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a >Documentation</a></li>
+                                <li><a href="/files/RosterManagerv3Manual.pdf" target="_blank">Documentation</a></li>
                                 <li><a href="tipstricks.html" target="_blank">Tips and Tricks</a></li>
                                 <li><a v-on:click="menuoption_shortcuts">Show Shortcuts</a></li>
                                 <li><a v-on:click="menuoption_showStats">Roster Stats</a></li>

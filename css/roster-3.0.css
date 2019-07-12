@@ -136,12 +136,12 @@ td.shift {
     padding: 1px;
 }
 
-.active {
-    background: blue;
-}
-
 .missing {
     background: #FEF9E7;
+}
+
+.active {
+    background: blue;
 }
 
 .invalid,
@@ -483,7 +483,7 @@ td.position span {
         top: 100px;
         left: 0px;
         text-align: center;
-        opacity: 0.3;
+        opacity: 0.2;
         width: 100%;
     }
 

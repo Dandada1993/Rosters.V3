@@ -1014,7 +1014,7 @@ let rostershift = {
             this.$emit('focusout');
         },
         cut: function() {
-            let copyText = this.$el; 
+            let copyText = this.$el.children[0]; 
             copyText.select();
             if (document.execCommand("cut")) {
                 this.valueChanged();
@@ -1027,7 +1027,7 @@ let rostershift = {
             //To implement multicell copy each hightlighted cell would have to return it's row, column and shiftstring
             //The main view instance would have to store these value in order of row, column value separated by a TAB
             //in a hidden input field. And then execute a copy of that hidden text field
-            let copyText = this.$el; 
+            let copyText = this.$el.children[0]; 
             copyText.select();
             document.execCommand("copy");
             // data.clipboard = this.schedule.shiftstring;
@@ -1075,7 +1075,7 @@ let rostershift = {
         },
         onTakeFocus: function(cell) {
             if (cell.row === this.row && cell.column === this.col) {
-                this.$el.focus();
+                this.$el.children[0].focus();
                 EventBus.$emit('TOOK-FOCUS', cell);
             }
         },
@@ -1298,7 +1298,9 @@ let rostershiftcell = {
             this.$emit('update-hours');
         },
         onTookFocus: function(cell) {
-            if (cell.row !== this.row || cell.column !== this.col) {
+            if (cell.row === this.row && cell.column === this.col) {
+                this.isActive = true;
+            } else {
                 this.isActive = false;
             }
         },
