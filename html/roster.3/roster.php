@@ -435,6 +435,12 @@
             <li class="dropdown-header">EXCUSE CODES</li>
             <li v-for="excuse in excusecodes" v-if="excusecodes"><a tabindex="-1">{{excuse.code}}</a></li>
         </ul>
+        <ul ref="nameContextMenu" id="nameContextMenu" class="dropdown-menu" role="menu" style="display:none">
+            <li class="dropdown-header">MOVE TO</li>
+            <template v-if="sections">
+                <li v-for="section in sections"><a tabindex="-1">{{section.name}}</a></li>
+            </template>
+        </ul>
     </div>
     <script src="/js/jquery-3.3.1.js"></script>
     <script src="/js/bootstrap.min.js"></script>

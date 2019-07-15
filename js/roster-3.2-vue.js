@@ -1536,13 +1536,22 @@ let rosterslot = {
             if (this.allowEdit) {
                 this.$emit('select-employee', this.employeeindex)
             }
-        }
+        },
+        contextMenuClicked: function(invokedOn, selectedMenu) {
+            let sectionname = selectedMenu.text();
+            // console.log(sectionname);
+            EventBus.$emit('MOVE-EMPLOYEE', {employee: this.employee, sectionname: sectionname});
+        },
     },
     mounted() {
         this.updatehours();
         EventBus.$on('SCHEDULE-UPDATED', () => {
             this.updatehours();
-          })
+          });
+        $(this.$el.querySelector('.name')).contextMenu({
+            menuSelector: "#nameContextMenu",
+            menuSelected: this.contextMenuClicked
+        });
     }
 }
 
@@ -2797,21 +2806,22 @@ const app = new Vue({
             }
             return addindex;
         },
-        addEmployee: function(section) {
-            let newemployee = {
-                id: 0,
-                emp_no: '',
-                emp_fname: '',
-                emp_lname: '',
-                gender: '',
-                defaultPosition: section.defaultPosition,
-                defaultQualifier: this.location.defaultQualifier,
-                sectionsDefID: section.id,
-                defaultLocation: ''
-            }
-            newemployee.schedules = this.createSchedules(this.location.defaultQualifier, section.defaultPosition);
+        addEmployee: function(section, newemployee = null) {
+            if (!newemployee) {
+                newemployee = {
+                    id: 0,
+                    emp_no: '',
+                    emp_fname: '',
+                    emp_lname: '',
+                    gender: '',
+                    defaultPosition: section.defaultPosition,
+                    defaultQualifier: this.location.defaultQualifier,
+                    sectionsDefID: section.id,
+                    defaultLocation: ''
+                };
+                newemployee.schedules = this.createSchedules(this.location.defaultQualifier, section.defaultPosition);
+            } 
             let addindex = this.getAddIndex(section.id);
-            //this.employees.push(newemployee);
             this.employees.splice(addindex, 0, newemployee);
         },
         getQualifiers: function(position) {
@@ -3597,6 +3607,22 @@ const app = new Vue({
         shiftSelected: function(shift) {
             $(this.$refs.selectshiftDialog.$el).modal('hide');
             EventBus.$emit('SHIFT-CHOSEN', { cell: this.shiftchoices.cell, shift: shift});
+        },
+        findSectionByName: function(name) {
+            for(let section of this.sections) {
+                if (section.name === name) {
+                    return section;
+                }
+            }
+        },
+        moveEmployee(employee, sectionname) {
+            let deleteindex = this.findEmployeeIndexByEmpNo(employee.emp_no);
+            let section = this.findSectionByName(sectionname);
+            if (employee.sectionsDefID !== section.id) {
+                this.employees.splice(deleteindex, 1);
+                employee.sectionsDefID = section.id;
+                this.addEmployee(section, employee);
+            }
         }
     },
     created: function() {
@@ -3671,6 +3697,9 @@ const app = new Vue({
         EventBus.$on('CHOOSE-SHIFT', (eventdata) => {
             this.chooseShift(eventdata)
         });
+        EventBus.$on('MOVE-EMPLOYEE', (eventdata) => {
+            this.moveEmployee(eventdata.employee, eventdata.sectionname);
+        })
 
     }
     // updated: function(){
