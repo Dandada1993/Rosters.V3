@@ -1,6 +1,6 @@
 let autoSave = null;
 
-let data = {
+const data = Vue.observable({
     employees: [],
     location: null,
     roster: null,
@@ -85,7 +85,7 @@ let data = {
         }
         return null;
     }
-}
+});
 
 const EventBus = new Vue();
 
@@ -143,21 +143,6 @@ const EventBus = new Vue();
 
     };
 })(jQuery, window);
-
-// function enableContextMenu(callback) {
-//     $("td.shift:not(.header)").contextMenu({
-//         menuSelector: "#contextMenu",
-//         menuSelected: function (invokedOn, selectedMenu) {
-//             // var msg = "You selected the menu item '" + selectedMenu.text() +
-//             //     "' on the value '" + invokedOn.text() + "'";
-//             let row = invokedOn.parent().attr('data-row');
-//             let col = invokedOn.parent().attr('data-col');
-//             // console.log(`Clicked row: ${row}, col: ${col}`);
-//             // console.log(msg);
-//             callback(row, col, selectedMenu.text());
-//         }
-//     });
-// }
 
 $(function () {
     $('[data-toggle="tooltip"]').tooltip();
