@@ -750,7 +750,7 @@ let rostershift = {
                         :title="title"/>
                     </template>
                     <template v-else>
-                        <span class="readonly" :class="{isclosed :!isOpen}">{{schedule.shiftstring}}</span>
+                        <span class="readonly" :class="{isclosed :!isOpen}" v-html="readonlyFormat"></span>
                     </template>
                 </div>
                 `, 
@@ -858,6 +858,22 @@ let rostershift = {
             }
             return this.isOpen && !exportedtoacumen
         },
+        readonlyFormat: function() {
+            let retval = '';
+            if (this.schedule) {
+                if (this.schedule.isExcuse()) {
+                    retval = this.schedule.shiftstring;
+                } else {
+                    if (this.schedule.firstShift) {
+                        retval = this.schedule.formatFirstShift('short', data.location.defaultQualifier);
+                    }
+                    if (this.schedule.secondShift) {
+                        retval = retval + '/<br>' + this.schedule.formatSecondShift('short', data.location.defaultQualifier);
+                    }
+                }
+            }
+            return retval;
+        }
     },
     methods: {
         valueChanged: function() {
@@ -2450,7 +2466,7 @@ const app = new Vue({
                 if (newVal.exportedToAcumen === '1') {
                     if (autoSave) {
                         clearInterval(autoSave);
-                        console.log('Cancelling auto save');
+                        //console.log('Cancelling auto save');
                     }
                 }
             }
@@ -3082,7 +3098,7 @@ const app = new Vue({
             .then(response => response.json())
             .catch(error => console.error(`Failed to delete employee with id: ${id} due to the following error:`, error));
         },
-        insertPayException: function(employee, schedule) {
+        insertPayException: function(employee, schedule) { //This function has been deprecated. The schedules are now inserted at the db level.
             //console.log('Insert Pay Exception');
             let pComment = this.getPComment(schedule.shiftstring);
             let formData = new FormData();
@@ -3118,7 +3134,7 @@ const app = new Vue({
             }
             return Promise.all(deletions);
         },
-        insertWorkingSchedule: function(employee, shift) {
+        insertWorkingSchedule: function(employee, shift) { //This function has been deprecated. The schedules are now inserted at the db level.
             let formData = new FormData();
             formData.append('emp_no', employee.emp_no);
             formData.append('date', shift.date.format('YYYY-MM-DD hh:mma'));
@@ -3141,7 +3157,7 @@ const app = new Vue({
             // const request = async () => { await fetch(url, { method: 'POST', body: formData}); }
             // request();
         },
-        insertSchedules: function() {
+        insertSchedules: function() { //This function has been deprecated. The schedules are now inserted at the db level.
             let payexception_promises = [];
             let schedule_promises = [];
             for(let employee of this.employees) {
@@ -3190,11 +3206,18 @@ const app = new Vue({
         },
         exportToAcumen: function() {
             this.saveRoster(true); //save roster
-            // let promises = this.deleteSchedules(); //delete all existing working schedules
-            // Promise.all(promises)
-            this.deleteSchedules()
-            .then(this.insertSchedules())
-            .then(this.loadRoster()); //Roster should be read-only after this call to loadRoster
+            // this.deleteSchedules()
+            // .then(this.insertSchedules())
+            // .then(this.loadRoster()); 
+            let formData = new FormData();
+            formData.append('rosterid', this.roster.id);
+            let url = 'exporttoacumen.php';
+            return fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(this.loadRoster())
+            .then($(this.$refs.resultAcumenExportDialog.$el).modal('show'));
         },
         finalPrint: function() {
             this.showdrafttext = false;
@@ -3414,6 +3437,29 @@ const app = new Vue({
                 showSelectEmployeeModal();
             }
         },
+        loadEmployeeSchedules: function(employee) {
+            let url = `getemployeeschedules.php?emp_no=${employee.emp_no}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
+            return fetch(url)
+            .then(response => response.json())
+            .then(savedschedules => {
+                this.showEmployeeSchedules(employee, savedschedules);
+            })
+        },
+        showEmployeeSchedules: function(employee, savedschedules) {
+            if (savedschedules) {
+                for(let savedschedule of savedschedules) {
+                    let scheduleindex = this.findScheduleIndexByWeekDate(savedschedule.date);
+                    if (scheduleindex !== null) {
+                        let schedule = employee.schedules[scheduleindex];
+                        schedule.id = savedschedule.id;
+                        schedule.rosterID = savedschedule.rosterID;
+                        schedule.shiftstring = savedschedule.shiftstring;
+                        schedule.setShifts();
+                        schedule.format('short'); 
+                    }
+                }
+            }
+        },
         employeeSelected: function(employee) {
             //console.log('Employee selected');
             hideSelectEmployeeModal();
@@ -3427,9 +3473,10 @@ const app = new Vue({
             } else {
                 this.removeEmployee(this.deletedemployees, employee);
             }
-            this.editEmployeeIndex = -1;
             //needs to load schedules for selected employee
+            this.loadEmployeeSchedules(this.employees[this.editEmployeeIndex]);
             this.updatestats();
+            this.editEmployeeIndex = -1;
         },
         enterShifts: function(data) {
             this.editdata = data;

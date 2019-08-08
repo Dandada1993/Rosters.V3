@@ -242,6 +242,7 @@
                 </div>
             </div>
         </div>
+        <div v-if="exportedToAcumen"><span class="footer">Please check your schedule daily. This roster is subject to change.</span></div>
         <div id="locationlegend" v-if="location && location.showlocationlegend === '1'">
             <div><strong>Location&nbsp;Codes</strong></div>
             <span v-for="entry in locations" v-if="entry.type !== 'O' && entry.type !== 'C'">

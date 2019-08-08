@@ -384,6 +384,10 @@ td.position span {
     height: 120px;
     animation: spin 2s linear infinite;
 }
+
+.footer {
+    display: none;
+}
   
   @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -442,7 +446,7 @@ td.position span {
 
     .shift-read {
         display: inline-block;
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         text-align: center;
         line-height: normal;
     }
@@ -472,7 +476,7 @@ td.position span {
     #locationlegend span {
         display: inline-block;
         width:20%;
-        font-size: 1.1rem;
+        font-size: 1.2rem;
     }
 
     .drafttext {
@@ -489,5 +493,13 @@ td.position span {
 
     #rosterurl {
         display: none;
+    }
+
+    .footer {
+        display: block;
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-top: 20px;
+        text-align: center;
     }
 }
