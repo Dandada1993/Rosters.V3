@@ -348,7 +348,7 @@
             :title="acumenexport.title">
             <template slot="body">
                 <div class="form-group">
-                    <p>{{acumenexport.body}}</p>
+                    <p v-html="acumenexport.body"></p>
                 </div>
             </template>
         </div>
@@ -394,6 +394,17 @@
                 </div>
             </template>
         </div>
+        <!-- <div ref="saveConflictDialog" 
+            is="genericdialog"
+            show-cancel
+            handle="save-conflict"
+            title="A saved conflict has accurred">
+            <template slot="body">
+                <div class="form-group">
+                    <p v-html="saveconflict"></p>
+                </div>
+            </template>
+        </div> -->
         <div ref="showstats" 
             is="genericdialog"
             show-cancel

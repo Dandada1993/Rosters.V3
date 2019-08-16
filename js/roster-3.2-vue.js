@@ -2447,7 +2447,8 @@ const app = new Vue({
         shiftchoices: {
             cell: null,
             choices: null
-        }
+        },
+        saveconflicts: ''
     },
     components: {
         'rostersection' : rostersection,
@@ -2982,6 +2983,10 @@ const app = new Vue({
                         .then(() => {
                             this.acumenexport.title = 'Save succeeded';
                             this.acumenexport.body = 'The roster was saved successful.'
+                            if (this.saveconflicts) {
+                                this.acumenexport.body = `${this.acumenexport.body}.<p>However some save conflicts were encountered:</p>${this.saveconflicts}`;
+                            }
+                            this.saveconflicts = null;
                         })
                         .catch(() => {
                             this.acumenexport.title = 'Save failed';
@@ -3003,7 +3008,7 @@ const app = new Vue({
                 let alltasks = saves.concat(deletions);
                 return Promise.all(alltasks)
                 .then(() => {
-                    Promise.all(this.saveRosterSchedules());
+                    return Promise.all(this.saveRosterSchedules());
                 });
             }
             return Promise.resolve(null);
@@ -3064,7 +3069,7 @@ const app = new Vue({
                 for(let schedule of employee.schedules) {
                     if (schedule.isDirty) {
                         if (schedule.shiftstring) {
-                            promises.push(this.saveRosterSchedule(employee.id, schedule));
+                            promises.push(this.saveRosterSchedule(employee, schedule));
                         } else {
                             if (parseInt(schedule.id) > 0) {
                                 promises.push(this.deleteEmployeeSchedule(schedule.id));
@@ -3075,8 +3080,8 @@ const app = new Vue({
             }
             return promises;
         },
-        saveRosterSchedule: function(rosterempid, schedule) {
-            let url = `saverosterschedule.php?rosterEmpID=${rosterempid}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURIComponent(schedule.getFullShiftString())}`;
+        saveRosterSchedule: function(employee, schedule) {
+            let url = `saverosterschedule.php?id=${schedule.id}&rosterEmpID=${employee.id}&date=${schedule.date.format('YYYY-MM-DD')}&shiftstring=${encodeURIComponent(schedule.getFullShiftString())}`;
             if (schedule.firstShift) {
                 url += `&locid1=${schedule.firstShift.location}`;
             }
@@ -3085,10 +3090,30 @@ const app = new Vue({
             }
             return fetch(url)
             .then(response => response.json())
-            .then(id => {
-                if (id) {
-                    schedule.id = id
-                    schedule.isDirty = false;
+            .then(result => {
+                if (result) {
+                    if (result.id > 0) {
+                        schedule.id = result.id
+                        schedule.rosterID = this.roster.id;
+                        schedule.isDirty = false;
+                    } else if (result.id == -1) {
+                        //there is another schedule in the database which conflicted same weekstarting, emp_no and date
+                        if (schedule.shiftstring !== result.shiftstring) {
+                            schedule.id = result.existingid;
+                            schedule.rosterID = result.rosterID;
+                            schedule.shiftstring = result.shiftstring;
+                            schedule.setShifts();
+                            schedule.format('short');
+                            schedule.isDirty = false;
+                            //prompt user that there was a save conflict for employee for date 
+                            let error = `A conflict occurred when attempting to save schedule for ${employee.emp_fname} ${employee.emp_lname} on ${schedule.date.format('dddd MMMM DD')}. The shift has been updated to show the saved shift ${result.shiftstring}`;
+                            if (this.saveconflicts) {
+                                this.saveconflicts = `${this.saveconflicts}<p>${error}</p>`;
+                            } else {
+                                this.saveconflicts = `<p>${error}</p>`;
+                            }
+                        }
+                    }
                 }
             });
         },
@@ -3289,8 +3314,9 @@ const app = new Vue({
         removeSchedules: function() {
             for(let employee of this.employees) {
                 for(let schedule of employee.schedules) {
-                    //if (schedule.shiftstring && schedule.rosterID === this.roster.id) { //This restricts the deletion to only shfits created in this roster
-                    if (schedule.shiftstring) {
+                    if (schedule.shiftstring && schedule.rosterID == this.roster.id) { //This restricts the deletion to only shfits created in this roster
+                    //if (schedule.shiftstring) {
+                        schedule.rosterID = this.roster.id;
                         schedule.id = 0;
                         schedule.shiftstring = '';
                         schedule.setShifts();
@@ -3620,6 +3646,7 @@ const app = new Vue({
             this.hoursexceeded = 0;
             this.hoursexceeded_shiftstring = '';
             this.hoursexceeded_cell = null;
+            this.saveconflicts = null;
             this.resetPatternsPosition();
             this.validate();
             showStartupModal();
