@@ -3066,13 +3066,18 @@ const app = new Vue({
         saveRosterSchedules: function() {
             let promises = [];
             for(let employee of this.employees) {
-                for(let schedule of employee.schedules) {
-                    if (schedule.isDirty) {
-                        if (schedule.shiftstring) {
-                            promises.push(this.saveRosterSchedule(employee, schedule));
-                        } else {
-                            if (parseInt(schedule.id) > 0) {
-                                promises.push(this.deleteEmployeeSchedule(schedule.id));
+                if (employee.emp_no) {
+                    for(let schedule of employee.schedules) {
+                        if (schedule.isDirty) {
+                            if (schedule.shiftstring) {
+                                //only save it if the shift is a valid shift
+                                if (Validator.validShifts(schedule.shiftstring)) {
+                                    promises.push(this.saveRosterSchedule(employee, schedule));
+                                }
+                            } else {
+                                if (parseInt(schedule.id) > 0) {
+                                    promises.push(this.deleteEmployeeSchedule(schedule.id));
+                                }
                             }
                         }
                     }
@@ -3758,7 +3763,21 @@ const app = new Vue({
         });
         EventBus.$on('MOVE-EMPLOYEE', (eventdata) => {
             this.moveEmployee(eventdata.employee, eventdata.sectionname);
-        })
+        });
+        //save roster if browser window is being closed or user is leaving the page
+        window.addEventListener('beforeunload', (e) => {
+            // Cancel the event
+            e.preventDefault();
+            for(let employee of this.employees) {
+                for(let schedule of employee.schedules) {
+                    if (schedule.isDirty) {
+                        e.returnValue = ''
+                        return e.returnValue;
+                    }
+                }
+            }
+            return undefined;
+        });
 
     }
     // updated: function(){
