@@ -3260,7 +3260,10 @@ const app = new Vue({
         },
         menuoption_exportToAcumen: function() {
             if (this.nomissingcells > 0) {
-                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('click', this.missingCellsModalOKClicked)
+                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('click', this.missingCellsModalOKClicked);
+                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton').on('hidden.bs.modal', function(){
+                    $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).off('click');
+                }));
                 $(this.$refs.missingCellsDialog.$el).modal('show');
             } else {
                 this.exportToAcumen();
