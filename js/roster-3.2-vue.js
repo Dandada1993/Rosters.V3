@@ -148,6 +148,7 @@ $(function () {
     $('[data-toggle="tooltip"]').tooltip();
 });
 
+
 function showStartupModal() {
     $('#selectLocations-dialog').modal({
         backdrop: 'static',
@@ -2099,7 +2100,7 @@ let shiftentry = {
             //     this.endtimestart = moment(this.localSchedule.secondShift.starttime).add(data.getMinimumShift(this.locID), 'hour');
             // }
         },
-        calculatePagetwoEndTimeEnd: function() {
+        calculatePageTwoEndTimeEnd: function() {
             this.endtimeend = this.openingtimes().closing.add(data.getEndShiftBuffer(this.locID), 'minute');
             if (this.localSchedule.secondShift.starttime) {
                 this.endtimeend = moment(this.localSchedule.secondShift.starttime).add(data.getMaximumShift(this.locID), 'h').substract(this.localSchedule.firstShift.hours(), 'hour');
@@ -2968,6 +2969,11 @@ const app = new Vue({
             let url = `approveroster.php?id=${this.roster.id}`;
             fetch(url);
         },
+        allowEdit: function() {
+            let url = `allowedit.php?id=${this.roster.id}`;
+            fetch(url)
+            .then(this.loadRoster());
+        },
         saveRoster: function(exportToAcumen = false, confirm = false) {
             let url = `saveroster.php?locID=${this.location.locID}&weekstarting=${this.weekstarting.format('YYYY-MM-DD')}`;
             if (exportToAcumen) {
@@ -3261,9 +3267,9 @@ const app = new Vue({
         menuoption_exportToAcumen: function() {
             if (this.nomissingcells > 0) {
                 $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('click', this.missingCellsModalOKClicked);
-                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton').on('hidden.bs.modal', function(){
+                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('hidden.bs.modal', () => {
                     $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).off('click');
-                }));
+                });
                 $(this.$refs.missingCellsDialog.$el).modal('show');
             } else {
                 this.exportToAcumen();
@@ -3280,6 +3286,9 @@ const app = new Vue({
             //store approval in database
             //Export to acumen
             $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).on('click', this.confirmApprovalOKClicked);
+            $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).on('hidden.bs.modal', function(){
+                $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).off('click');
+            });
             $(this.$refs.confirmApproval.$el).modal('show');
         },
         menuoption_finalPrint: function() {
@@ -3301,6 +3310,9 @@ const app = new Vue({
             /* confirm with user that any existing shifts will be deleted */
             // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.showCopyFromModal);
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.showCopyFromModal);
+            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('hidden.bs.modal', function() {
+                $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
+            });
             $(this.$refs.deleteSchedulesDialog.$el).modal('show');
         },
         showCopyFromModal: function() {
@@ -3373,7 +3385,15 @@ const app = new Vue({
         menuoption_deleteAllShifts: function() {
             // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.removeSchedules);
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.deleteAllShifts);
+            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('hidden.bs.modal', function(){
+                $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
+            });
             $(this.$refs.deleteSchedulesDialog.$el).modal('show');
+        },
+        menuoption_allowedit: function() {
+            if (this.roster && this.roster.exportedToAcumen === '1') {
+                this.allowEdit();
+            }
         },
         actionMenuOption: function(action) {
             EventBus.$emit('MENUOPTION-SELECTION', action);
@@ -3781,7 +3801,20 @@ const app = new Vue({
             }
             return undefined;
         });
-
+        window.onscroll = function() {
+            let element = document.getElementById("rosterheader");
+            if (document.body.scrollTop > 86 || document.documentElement.scrollTop > 86) {
+                if (!element.classList.contains("fix-rosterheader")) {
+                    console.log("Adding class");
+                    element.classList.add("fix-rosterheader");
+                }
+            } else {
+                if (element.classList.contains("fix-rosterheader")) {
+                    console.log("Removing class");
+                    element.classList.remove("fix-rosterheader");
+                }
+            }
+        }
     }
     // updated: function(){
     //     this.$nextTick(function() {

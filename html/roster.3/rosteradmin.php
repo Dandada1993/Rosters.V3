@@ -104,6 +104,14 @@
                             </ul>
                         </li>
                         <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Admin
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li :class="{disabled: !exportedToAcumen}"><a v-on:click="menuoption_allowedit">Allow edit</a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="False">Help
                                 <span class="caret"></span>
                             </a>

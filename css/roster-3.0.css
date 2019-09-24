@@ -55,6 +55,12 @@ td:not(.shift) {
     margin: auto;
 }
 
+.fix-rosterheader {
+    top: 51px;
+    position: fixed;
+    background: white;
+}
+
 .header {
     font-size: 1.7rem;
     font-weight: bold;
