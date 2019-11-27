@@ -9,6 +9,7 @@ This cannot be overridden without a Firefox-specific hack (below) that we don't 
 
 body { 
     padding-top: 70px; 
+    overflow-x: hidden;
 }
 
 #main table {
@@ -59,6 +60,11 @@ td:not(.shift) {
     top: 51px;
     position: fixed;
     background: white;
+    /* transition: 0.4s; */
+}
+
+.pad-rosterdetail {
+    padding-top: 51px;
 }
 
 .header {
@@ -508,4 +514,9 @@ td.position span {
         margin-top: 20px;
         text-align: center;
     }
+
+    /* .fix-rosterheader {
+        top: 25px;
+        position: relative;
+    } */
 }

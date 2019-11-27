@@ -2449,7 +2449,8 @@ const app = new Vue({
             cell: null,
             choices: null
         },
-        saveconflicts: ''
+        saveconflicts: '',
+        addfixrosterheader: false
     },
     components: {
         'rostersection' : rostersection,
@@ -2503,16 +2504,20 @@ const app = new Vue({
                 let positionqualifiers = this.loadPositionQualifiers();
                 let roster = this.loadRoster();
                 let sections = this.loadSections();
-                let allocatedhours = this.loadAllocatedHours();
+                // let allocatedhours = this.loadAllocatedHours();
                 let positions = this.loadPositions();
-                let otheremployees = this.loadOtherEmployees();
+                // let otheremployees = this.loadOtherEmployees();
                 let locationqualifiers = this.loadLocationsQualifiers();
                 let excusecodes = this.loadExcuseCodes();
-                let shortcuts = this.loadShortcuts();
-                let approvedrosters = this.loadApprovedRosters();
-                Promise.all([openinghours, positionqualifiers, roster, sections, allocatedhours, positions, otheremployees, locationqualifiers, excusecodes, shortcuts, approvedrosters])
+                // let shortcuts = this.loadShortcuts();
+                // let approvedrosters = this.loadApprovedRosters();
+                Promise.all([openinghours, positionqualifiers, roster, sections, positions, locationqualifiers, excusecodes])
                 .then(() => {
                     this.loadEmployees();
+                    this.loadOtherEmployees();
+                    this.loadApprovedRosters();
+                    this.loadAllocatedHours();
+                    this.loadShortcuts();
                     document.title = `${this.location.name} Roster weekending ${this.weekendingDisplay}`;
                 });
                 // if (newval.autoApprove === '1') {
@@ -2822,7 +2827,9 @@ const app = new Vue({
                     sectionsDefID: section.id,
                     defaultLocation: ''
                 };
-                newemployee.schedules = this.createSchedules(this.location.defaultQualifier, section.defaultPosition);
+                //newemployee.schedules = this.createSchedules(this.location.defaultQualifier, section.defaultPosition);
+                newemployee.schedules = this.createSchedules(newemployee);
+
             } 
             let addindex = this.getAddIndex(section.id);
             this.employees.splice(addindex, 0, newemployee);
@@ -3267,7 +3274,7 @@ const app = new Vue({
         menuoption_exportToAcumen: function() {
             if (this.nomissingcells > 0) {
                 $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('click', this.missingCellsModalOKClicked);
-                $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).on('hidden.bs.modal', () => {
+                $(this.$refs.missingCellsDialog.$el).on('hidden.bs.modal', () => {
                     $(this.$refs.missingCellsDialog.$el.querySelector('#missingCellsDialogOKButton')).off('click');
                 });
                 $(this.$refs.missingCellsDialog.$el).modal('show');
@@ -3286,7 +3293,7 @@ const app = new Vue({
             //store approval in database
             //Export to acumen
             $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).on('click', this.confirmApprovalOKClicked);
-            $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).on('hidden.bs.modal', function(){
+            $(this.$refs.confirmApproval.$el).on('hidden.bs.modal', () => {
                 $(this.$refs.confirmApproval.$el.querySelector('#confirmApproval_OkButton')).off('click');
             });
             $(this.$refs.confirmApproval.$el).modal('show');
@@ -3310,7 +3317,7 @@ const app = new Vue({
             /* confirm with user that any existing shifts will be deleted */
             // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.showCopyFromModal);
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.showCopyFromModal);
-            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('hidden.bs.modal', function() {
+            $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', () => {
                 $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
             });
             $(this.$refs.deleteSchedulesDialog.$el).modal('show');
@@ -3385,7 +3392,7 @@ const app = new Vue({
         menuoption_deleteAllShifts: function() {
             // $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', this.removeSchedules);
             $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('click', this.deleteAllShifts);
-            $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).on('hidden.bs.modal', function(){
+            $(this.$refs.deleteSchedulesDialog.$el).on('hidden.bs.modal', () => {
                 $(this.$refs.deleteSchedulesDialog.$el.querySelector('#okbutton')).off('click');
             });
             $(this.$refs.deleteSchedulesDialog.$el).modal('show');
@@ -3802,17 +3809,38 @@ const app = new Vue({
             return undefined;
         });
         window.onscroll = function() {
-            let element = document.getElementById("rosterheader");
+            let header = document.getElementById("rosterheader");
+            let detail = document.getElementById("rosterdetail");
             if (document.body.scrollTop > 86 || document.documentElement.scrollTop > 86) {
-                if (!element.classList.contains("fix-rosterheader")) {
-                    console.log("Adding class");
-                    element.classList.add("fix-rosterheader");
+                if (!header.classList.contains("fix-rosterheader")) {
+                    // console.log("Adding class");
+                    header.classList.add("fix-rosterheader");
+                    detail.classList.add("pad-rosterdetail");
                 }
             } else {
-                if (element.classList.contains("fix-rosterheader")) {
-                    console.log("Removing class");
-                    element.classList.remove("fix-rosterheader");
+                if (header.classList.contains("fix-rosterheader")) {
+                    // console.log("Removing class");
+                    header.classList.remove("fix-rosterheader");
+                    detail.classList.remove("pad-rosterdetail");
                 }
+            }
+        };
+        window.onbeforeprint = function() {
+            let header = document.getElementById("rosterheader");
+            let detail = document.getElementById("rosterdetail");
+            if (header.classList.contains("fix-rosterheader")) {
+                // console.log("Removing class");
+                header.classList.remove("fix-rosterheader");
+                detail.classList.remove("pad-rosterdetail");
+                this.addfixrosterheader = true;
+            } else {
+                this.addfixrosterheader = false;
+            }
+        };
+        window.onafterprint = function() {
+            if (this.addfixrosterheader) {
+                document.getElementById("rosterheader").classList.add("fix-rosterheader");
+                document.getElementById("rosterdetail").classListt.add("pad-rosterdetail");
             }
         }
     }

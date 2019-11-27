@@ -23,7 +23,7 @@
         <div 
             v-if="location && location.autoApprove === '0' && showdrafttext"
             :class="{ drafttext: showdrafttext }"
-        >DRAFT</div>
+        >DO<br>NOT<br>POST</div>
         <div v-if="location" id="rosterurl"><input type="text" :value="rosterURL" /></div>
         <?php
             echo "<input type=\"text\" id=\"locID\" value=\"$locID\" style=\"display: none;\"/>";
@@ -198,7 +198,7 @@
                 </table>
             </div>
         </div>
-        <div v-if="sections" class="container-fluid">
+        <div v-if="sections" id="rosterdetail" class="container-fluid">
             <template v-if="schedulesloaded">
                 <div class="row">
                     <div is="rostersection" 
@@ -454,7 +454,7 @@
             </template>
         </ul>
     </div>
-    <script src="/js/jquery-3.3.1.js"></script>
+    <script src="/js/jquery-3.3.1.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/moment.js"></script>
     <script src="/js/axios.min.js"></script>
